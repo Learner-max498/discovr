@@ -64,20 +64,28 @@ body {
 .back-btn { background: none; border: none; color: #8c36ff; font-size: 20px; cursor: pointer; }
 .chat-messages {
     flex: 1; overflow-y: auto; padding: 12px 12px;
-    display: flex; flex-direction: column; gap: 3px;
+    display: flex; flex-direction: column; gap: 8px;
     width: 100%; overflow-x: hidden;
     background: #0d0d0d;
 }
-.message { display: flex; max-width: 82%; margin-bottom: 2px; }
-.message.sent     { align-self: flex-end; }
-.message.received { align-self: flex-start; }
+/* ── NEW MESSAGE LAYOUT (tick outside bubble) ── */
+.message {
+    display: flex;
+    flex-direction: column;
+    max-width: 82%;
+}
+.message.sent {
+    align-self: flex-end;
+}
+.message.received {
+    align-self: flex-start;
+}
 .message-bubble {
-    padding: 8px 12px 6px 12px;
+    padding: 8px 12px;
     border-radius: 18px;
     word-wrap: break-word;
     font-size: 15px;
     line-height: 1.45;
-    position: relative;
 }
 .message.sent .message-bubble {
     background: #7a22ff;
@@ -90,15 +98,34 @@ body {
     border-bottom-left-radius: 4px;
     color: #f0eaff;
 }
-.message-meta {
-    display: flex; align-items: center; justify-content: flex-end;
-    gap: 4px; margin-top: 3px;
+.message-footer {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+    font-size: 10px;
+    color: rgba(255,255,255,0.5);
 }
-.message-time { font-size: 10px; color: rgba(255,255,255,0.5); white-space: nowrap; }
-.message.received .message-meta { justify-content: flex-start; }
-.message.received .message-time { color: rgba(255,255,255,0.4); }
-.msg-tick { font-size: 11px; line-height: 1; flex-shrink: 0; color: rgba(255,255,255,0.45); }
-.msg-tick.seen { color: #c49eff; }
+.message.sent .message-footer {
+    justify-content: flex-end;
+}
+.message.received .message-footer {
+    justify-content: flex-start;
+}
+.message-time {
+    font-size: 10px;
+    color: rgba(255,255,255,0.5);
+}
+.msg-tick {
+    font-size: 11px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+}
+.msg-tick.seen {
+    color: #c49eff;
+}
+/* Quote styling (inside bubble) */
 .reply-quote {
     background: rgba(0,0,0,0.25);
     border-left: 3px solid #d4aaff;
@@ -125,7 +152,7 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.message.sent     .reply-quote-name { color: #e0c8ff; }
+.message.sent .reply-quote-name { color: #e0c8ff; }
 .message.received .reply-quote-name { color: #b07fff; }
 .reply-quote-text {
     font-size: 12.5px;
@@ -135,23 +162,48 @@ body {
     text-overflow: ellipsis;
     line-height: 1.35;
 }
+/* Swipe to reply */
 .swipe-wrapper {
-    position: relative; display: flex; align-items: center; overflow: visible;
+    position: relative;
+    display: flex;
+    flex-direction: column;
 }
 .reply-icon {
-    position: absolute; width: 34px; height: 34px; border-radius: 50%;
-    background: #2a2a2a; border: 1px solid #8c36ff;
-    display: flex; align-items: center; justify-content: center; font-size: 14px;
-    opacity: 0; pointer-events: none; z-index: 0; transition: opacity 0.1s;
+    position: absolute;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #2a2a2a;
+    border: 1px solid #8c36ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 0;
+    transition: opacity 0.1s;
 }
-.message.sent     .reply-icon { left: -42px; }
-.message.received .reply-icon { right: -42px; }
+.message.sent .reply-icon {
+    left: -42px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+.message.received .reply-icon {
+    right: -42px;
+    top: 50%;
+    transform: translateY(-50%);
+}
 .bubble-inner {
-    position: relative; z-index: 1;
+    position: relative;
+    z-index: 1;
     transition: transform 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    will-change: transform; cursor: default; user-select: none;
+    will-change: transform;
+    cursor: default;
+    user-select: none;
 }
 .bubble-inner.dragging { transition: none; }
+/* Reply bar */
 .reply-bar {
     display: none; align-items: center; gap: 8px; padding: 8px 12px; margin-bottom: 8px;
     background: #1a1a1a; border-left: 3px solid #8c36ff; border-radius: 0 10px 10px 0;
@@ -162,6 +214,7 @@ body {
 .reply-bar-name  { font-size: 11px; color: #b07fff; font-weight: 600; margin-bottom: 1px; }
 .reply-bar-text  { font-size: 13px; color: #c7b2ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .reply-bar-close { background: none; border: none; color: #888; font-size: 18px; cursor: pointer; flex-shrink: 0; line-height: 1; }
+/* Input area */
 .chat-input { padding: 16px; border-top: 1px solid rgba(128,0,255,0.22); background: #000; flex-shrink: 0; }
 .attachment-preview {
     margin-bottom: 12px; background: #1a1a1a; padding: 8px 12px;
@@ -182,6 +235,7 @@ body {
     background: none; border: none; font-size: 22px; cursor: pointer;
     padding: 8px; display: flex; align-items: center; justify-content: center; color: #8c36ff;
 }
+/* User select modal */
 .user-select-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #000; z-index: 2000; overflow-y: auto; }
 .user-select-modal.show { display: block; }
 .user-select-header { padding: 16px; border-bottom: 1px solid rgba(128,0,255,0.22); display: flex; align-items: center; gap: 16px; position: sticky; top: 0; background: #000; }
@@ -193,6 +247,7 @@ body {
 .user-list-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .user-list-name { font-weight: 600; }
 .user-list-details { font-size: 13px; color: #c7b2ff; }
+/* Bottom nav */
 .bottom-nav {
     position: fixed; bottom: 0; left: 0; right: 0; max-width: 500px;
     margin: 0 auto; background: rgba(0,0,0,0.95); border-top: 1px solid rgba(128,0,255,0.22);
@@ -300,7 +355,9 @@ function attachSwipeListeners() {
     document.querySelectorAll('.bubble-inner').forEach(inner => {
         if (inner._swipeAttached) return;
         inner._swipeAttached = true;
-        const icon = inner.closest('.swipe-wrapper').querySelector('.reply-icon');
+        const wrapper = inner.closest('.swipe-wrapper');
+        if (!wrapper) return;
+        const icon = wrapper.querySelector('.reply-icon');
         let startX = 0, startY = 0, dx = 0, active = false, triggered = false;
         const TRIGGER = 70, MAX = 90;
         inner.addEventListener('touchstart', e => {
@@ -396,7 +453,7 @@ function subscribeToSeenUpdates() {
         }).subscribe();
 }
 
-// ── RENDER ONE MESSAGE ────────────────────────────────────────────────────────
+// ── RENDER ONE MESSAGE (new structure: bubble + footer) ──────────────────────
 function renderMessageHtml(m) {
     const isSent = m.sender_id === currentUser.id;
     const dir    = isSent ? 'sent' : 'received';
@@ -404,17 +461,16 @@ function renderMessageHtml(m) {
     let fileHtml = '';
     if (m.file_url) {
         if (m.file_type === 'image')
-            fileHtml = `<div style="margin-top:8px;"><img src="${m.file_url}" style="max-width:220px;border-radius:10px;display:block;"></div>`;
+            fileHtml = `<div style="margin-top:6px;"><img src="${m.file_url}" style="max-width:220px;border-radius:10px;display:block;"></div>`;
         else if (m.file_type === 'video')
-            fileHtml = `<div style="margin-top:8px;"><video controls style="max-width:220px;border-radius:10px;"><source src="${m.file_url}"></video></div>`;
+            fileHtml = `<div style="margin-top:6px;"><video controls style="max-width:220px;border-radius:10px;"><source src="${m.file_url}"></video></div>`;
         else
             fileHtml = `<div style="margin-top:6px;"><a href="${m.file_url}" target="_blank" style="color:#c49eff;font-size:13px;">📎 Download file</a></div>`;
     }
 
-    // For quotes: we now store the name inside reply_to_content: "@Name: original text"
+    // Quote parsing (name embedded as @Name: text)
     let quoteHtml = '';
     if (m.reply_to_content) {
-        // Try to extract name if we stored it in the format "@Name: text", else just show the content
         let quoteName = '';
         let quoteText = m.reply_to_content;
         const atMatch = m.reply_to_content.match(/^@([^:]+):\s*(.*)$/);
@@ -422,9 +478,7 @@ function renderMessageHtml(m) {
             quoteName = atMatch[1];
             quoteText = atMatch[2];
         } else {
-            // Fallback: try to determine based on who sent it
-            if (isSent) quoteName = chatUser?.name || '';
-            else quoteName = currentUser?.name || 'You';
+            quoteName = isSent ? (chatUser?.name || '') : (currentUser?.name || 'You');
         }
         const truncated = quoteText.length > 80 ? quoteText.substring(0, 80) + '…' : quoteText;
         quoteHtml = `
@@ -435,30 +489,31 @@ function renderMessageHtml(m) {
     }
 
     const timeStr = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const safe    = (m.content || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    const safeContent = (m.content || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
     const safeName = escapeHtml(isSent ? (currentUser?.name || 'You') : (chatUser?.name || ''));
 
-    let tick = '';
+    // Tick only for sent messages, placed in footer
+    let tickHtml = '';
     if (isSent) {
         if (m.seen === true) {
-            tick = `<span class="msg-tick seen" id="tick-${m.id}" title="Seen"><i class="fas fa-check-double"></i></span>`;
+            tickHtml = `<span class="msg-tick seen" id="tick-${m.id}" title="Seen"><i class="fas fa-check-double"></i></span>`;
         } else {
-            tick = `<span class="msg-tick" id="tick-${m.id}" title="Sent"><i class="fas fa-check"></i></span>`;
+            tickHtml = `<span class="msg-tick" id="tick-${m.id}" title="Sent"><i class="fas fa-check"></i></span>`;
         }
     }
 
     return `<div class="message ${dir}" data-msg-id="${m.id}">
         <div class="swipe-wrapper">
             <div class="reply-icon">↩</div>
-            <div class="bubble-inner" data-content="${safe}" data-sender-name="${safeName}">
+            <div class="bubble-inner" data-content="${safeContent}" data-sender-name="${safeName}">
                 <div class="message-bubble">
                     ${quoteHtml}
                     <span>${escapeHtml(m.content || '')}</span>
                     ${fileHtml}
-                    <div class="message-meta">
-                        <span class="message-time">${timeStr}</span>
-                        ${tick}
-                    </div>
+                </div>
+                <div class="message-footer">
+                    <span class="message-time">${timeStr}</span>
+                    ${tickHtml}
                 </div>
             </div>
         </div>
@@ -629,7 +684,7 @@ function markRead(id) {
     localStorage.setItem('aou_last_read', JSON.stringify(lastReadAt));
 }
 
-// ── SEND (fixed: no extra column, store name inside reply_to_content if needed) ──
+// ── SEND ──────────────────────────────────────────────────────────────────────
 window.handleFileSelect = e => {
     const f = e.target.files[0]; if (!f) return;
     selectedFile = f;
@@ -664,9 +719,7 @@ window.sendMessage = async () => {
         file_type: fileType,
         seen: false
     };
-    // Only add reply_to_content – no extra column
     if (replyToContent) {
-        // Optionally embed the sender name into the quoted text for display
         const namePrefix = replyToSenderName ? `@${replyToSenderName}: ` : '';
         payload.reply_to_content = namePrefix + replyToContent;
     }
@@ -682,14 +735,12 @@ window.sendMessage = async () => {
     const { data: realMsg, error } = await sb.from('messages').insert(payload).select().single();
     if (error) {
         showToast('Failed to send message: ' + (error.message || ''), 'error');
-        console.error('Send error:', error);
         messagesCache = messagesCache.filter(m => m.id !== tempId);
         const optDiv = document.querySelector(`.message[data-msg-id="${tempId}"]`);
         if (optDiv) optDiv.remove();
         btn.disabled = false;
         return;
     }
-    // Replace optimistic with real
     const idx = messagesCache.findIndex(m => m.id === tempId);
     if (idx !== -1) messagesCache[idx] = realMsg;
     const optDiv = document.querySelector(`.message[data-msg-id="${tempId}"]`);
