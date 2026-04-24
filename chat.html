@@ -63,32 +63,78 @@ body {
 .modal-header h2 { font-size: 18px; font-weight: 600; }
 .back-btn { background: none; border: none; color: #8c36ff; font-size: 20px; cursor: pointer; }
 .chat-messages {
-    flex: 1; overflow-y: auto; padding: 20px 16px;
-    display: flex; flex-direction: column; gap: 12px;
+    flex: 1; overflow-y: auto; padding: 12px 12px;
+    display: flex; flex-direction: column; gap: 3px;
     width: 100%; overflow-x: hidden;
+    background: #0d0d0d;
 }
-.message { display: flex; max-width: 75%; }
-.message.sent { align-self: flex-end; }
+.message { display: flex; max-width: 82%; margin-bottom: 2px; }
+.message.sent     { align-self: flex-end; }
 .message.received { align-self: flex-start; }
 .message-bubble {
-    padding: 12px 16px; border-radius: 20px; word-wrap: break-word;
-    font-size: 15px; line-height: 1.4;
+    padding: 8px 12px 6px 12px;
+    border-radius: 18px;
+    word-wrap: break-word;
+    font-size: 15px;
+    line-height: 1.45;
+    position: relative;
 }
-.message.sent .message-bubble { background: #8c36ff; border-bottom-right-radius: 4px; }
-.message.received .message-bubble { background: #1a1a1a; border: 1px solid rgba(128,0,255,0.22); border-bottom-left-radius: 4px; }
+.message.sent .message-bubble {
+    background: #7a22ff;
+    border-bottom-right-radius: 4px;
+    color: #fff;
+}
+.message.received .message-bubble {
+    background: #1e1e2e;
+    border: 1px solid rgba(128,0,255,0.25);
+    border-bottom-left-radius: 4px;
+    color: #f0eaff;
+}
 .message-meta {
     display: flex; align-items: center; justify-content: flex-end;
-    gap: 4px; margin-top: 4px;
+    gap: 4px; margin-top: 3px;
 }
-.message-time { font-size: 10px; color: #888; }
+.message-time { font-size: 10px; color: rgba(255,255,255,0.5); white-space: nowrap; }
 .message.received .message-meta { justify-content: flex-start; }
-.msg-tick {
-    font-size: 13px;
-    line-height: 1;
-    flex-shrink: 0;
+.message.received .message-time { color: rgba(255,255,255,0.4); }
+.msg-tick { font-size: 11px; line-height: 1; flex-shrink: 0; color: rgba(255,255,255,0.45); }
+.msg-tick.seen { color: #c49eff; }
+.reply-quote {
+    background: rgba(0,0,0,0.25);
+    border-left: 3px solid #d4aaff;
+    border-radius: 4px 10px 10px 4px;
+    padding: 6px 10px 5px 10px;
+    margin-bottom: 7px;
+    max-width: 100%;
+    overflow: hidden;
+    cursor: default;
 }
-.msg-tick.single { color: #888; }
-.msg-tick.double { color: #a070ff; }
+.message.sent .reply-quote {
+    background: rgba(0,0,0,0.28);
+    border-left-color: #e0c8ff;
+}
+.message.received .reply-quote {
+    background: rgba(128,0,255,0.18);
+    border-left-color: #9d5cff;
+}
+.reply-quote-name {
+    font-size: 11.5px;
+    font-weight: 700;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.message.sent     .reply-quote-name { color: #e0c8ff; }
+.message.received .reply-quote-name { color: #b07fff; }
+.reply-quote-text {
+    font-size: 12.5px;
+    color: rgba(255,255,255,0.65);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.35;
+}
 .swipe-wrapper {
     position: relative; display: flex; align-items: center; overflow: visible;
 }
@@ -98,7 +144,7 @@ body {
     display: flex; align-items: center; justify-content: center; font-size: 14px;
     opacity: 0; pointer-events: none; z-index: 0; transition: opacity 0.1s;
 }
-.message.sent  .reply-icon { left: -42px; }
+.message.sent     .reply-icon { left: -42px; }
 .message.received .reply-icon { right: -42px; }
 .bubble-inner {
     position: relative; z-index: 1;
@@ -106,20 +152,14 @@ body {
     will-change: transform; cursor: default; user-select: none;
 }
 .bubble-inner.dragging { transition: none; }
-.reply-quote {
-    border-left: 3px solid #8c36ff; background: rgba(128,0,255,0.12);
-    border-radius: 6px; padding: 5px 10px; margin-bottom: 8px; font-size: 12px;
-    color: rgba(255,255,255,0.7); line-height: 1.4; overflow: hidden;
-    text-overflow: ellipsis; white-space: nowrap; max-width: 200px;
-}
-.message.received .reply-quote { border-left-color: #8c36ff; background: rgba(128,0,255,0.12); }
 .reply-bar {
     display: none; align-items: center; gap: 8px; padding: 8px 12px; margin-bottom: 8px;
     background: #1a1a1a; border-left: 3px solid #8c36ff; border-radius: 0 10px 10px 0;
 }
 .reply-bar.show { display: flex; }
 .reply-bar-body { flex: 1; min-width: 0; }
-.reply-bar-label { font-size: 11px; color: #8c36ff; font-weight: 700; margin-bottom: 2px; }
+.reply-bar-label { font-size: 11px; color: #9d5cff; font-weight: 700; margin-bottom: 2px; }
+.reply-bar-name  { font-size: 11px; color: #b07fff; font-weight: 600; margin-bottom: 1px; }
 .reply-bar-text  { font-size: 13px; color: #c7b2ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .reply-bar-close { background: none; border: none; color: #888; font-size: 18px; cursor: pointer; flex-shrink: 0; line-height: 1; }
 .chat-input { padding: 16px; border-top: 1px solid rgba(128,0,255,0.22); background: #000; flex-shrink: 0; }
@@ -140,8 +180,7 @@ body {
 }
 .attach-btn {
     background: none; border: none; font-size: 22px; cursor: pointer;
-    padding: 8px; display: flex; align-items: center; justify-content: center;
-    color: #8c36ff;
+    padding: 8px; display: flex; align-items: center; justify-content: center; color: #8c36ff;
 }
 .user-select-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #000; z-index: 2000; overflow-y: auto; }
 .user-select-modal.show { display: block; }
@@ -177,6 +216,7 @@ body {
 </style>
 </head>
 <body>
+
 <div class="container">
     <div class="header">
         <h1>Chats</h1>
@@ -184,67 +224,98 @@ body {
     </div>
     <div id="conversationsList"><div class="empty-state">Loading conversations...</div></div>
 </div>
+
 <div class="user-select-modal" id="userSelectModal">
     <div class="user-select-header"><button class="back-btn" onclick="hideUserSelect()">←</button><h2>New Message</h2></div>
     <div class="user-search-box"><input type="text" id="userSearchInput" placeholder="Search users..." oninput="filterUserList()"></div>
     <div id="userSelectList"></div>
 </div>
+
 <div class="modal" id="chatModal">
     <div class="modal-header"><button class="back-btn" onclick="closeChat()">←</button><h2 id="chatTitle">Chat</h2></div>
     <div class="chat-messages" id="chatMessages"><div class="empty-state">Loading messages...</div></div>
     <div class="chat-input">
-        <div class="attachment-preview" id="attachmentPreview" style="display:none;"><span id="attachmentName"></span><button onclick="removeAttachment()" style="background:none;border:none;color:#FF4444;cursor:pointer;font-size:18px;">✕</button></div>
-        <div class="reply-bar" id="replyBar"><div class="reply-bar-body"><div class="reply-bar-label">↩ Replying</div><div class="reply-bar-text" id="replyBarText"></div></div><button class="reply-bar-close" onclick="clearReply()">✕</button></div>
-        <div class="chat-input-container"><button class="attach-btn" onclick="document.getElementById('fileInput').click()">📎</button><input type="text" id="messageInput" placeholder="Type a message..." onkeypress="handleKeyPress(event)"><button onclick="sendMessage()">Send</button></div>
+        <div class="attachment-preview" id="attachmentPreview" style="display:none;">
+            <span id="attachmentName"></span>
+            <button onclick="removeAttachment()" style="background:none;border:none;color:#FF4444;cursor:pointer;font-size:18px;">✕</button>
+        </div>
+        <div class="reply-bar" id="replyBar">
+            <div class="reply-bar-body">
+                <div class="reply-bar-label">↩ Replying to</div>
+                <div class="reply-bar-name" id="replyBarName"></div>
+                <div class="reply-bar-text" id="replyBarText"></div>
+            </div>
+            <button class="reply-bar-close" onclick="clearReply()">✕</button>
+        </div>
+        <div class="chat-input-container">
+            <button class="attach-btn" onclick="document.getElementById('fileInput').click()">📎</button>
+            <input type="text" id="messageInput" placeholder="Type a message..." onkeypress="handleKeyPress(event)">
+            <button onclick="sendMessage()">Send</button>
+        </div>
         <input type="file" id="fileInput" style="display:none;" onchange="handleFileSelect(event)" accept="image/*,video/*,application/pdf">
     </div>
 </div>
+
 <div class="bottom-nav">
     <a href="everyone.html" class="nav-item"><div class="nav-icon"><i class="fas fa-users"></i></div><span>Everyone</span></a>
     <a href="posts.html" class="nav-item"><div class="nav-icon"><i class="fas fa-plus-circle"></i></div><span>Posts</span></a>
     <a href="chat.html" class="nav-item active" id="chatNavItem"><div class="nav-icon"><i class="fas fa-comment-dots"></i></div><span>Chats</span><span class="nav-badge" id="chatNavBadge" style="display:none;">0</span></a>
     <a href="profile.html" class="nav-item"><div class="nav-icon"><i class="fas fa-user-circle"></i></div><span>Profile</span></a>
 </div>
+
 <script>
-const sb = window.supabase.createClient('https://oyeojlvrjhaymbhohxdq.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im95ZW9qbHZyamhheW1iaG9oeGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNzMxNDYsImV4cCI6MjA5MDk0OTE0Nn0.aL-Y0hXjfpSIfqnwX-CDhoYLu5fsaMZPr6wW_VxxYj8');
+const sb = window.supabase.createClient(
+    'https://oyeojlvrjhaymbhohxdq.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im95ZW9qbHZyamhheW1iaG9oeGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNzMxNDYsImV4cCI6MjA5MDk0OTE0Nn0.aL-Y0hXjfpSIfqnwX-CDhoYLu5fsaMZPr6wW_VxxYj8'
+);
+
 let currentUser = null, chatUser = null, allUsers = [];
 let messagesSubscription = null, conversationsSubscription = null, seenSubscription = null;
 let selectedFile = null;
 let replyToContent = null;
+let replyToSenderName = null;
 const lastReadAt = {};
-function setReply(content) {
-    replyToContent = content;
+let messagesCache = [];
+
+// ── REPLY HELPERS ─────────────────────────────────────────────────────────────
+function setReply(content, senderName) {
+    replyToContent    = content;
+    replyToSenderName = senderName;
     const preview = content.length > 60 ? content.substring(0, 60) + '…' : content;
+    document.getElementById('replyBarName').textContent = senderName || '';
     document.getElementById('replyBarText').textContent = preview;
     document.getElementById('replyBar').classList.add('show');
     document.getElementById('messageInput').focus();
 }
 function clearReply() {
     replyToContent = null;
+    replyToSenderName = null;
     document.getElementById('replyBar').classList.remove('show');
+    document.getElementById('replyBarName').textContent = '';
     document.getElementById('replyBarText').textContent = '';
 }
+
+// ── SWIPE TO REPLY ────────────────────────────────────────────────────────────
 function attachSwipeListeners() {
     document.querySelectorAll('.bubble-inner').forEach(inner => {
+        if (inner._swipeAttached) return;
+        inner._swipeAttached = true;
         const icon = inner.closest('.swipe-wrapper').querySelector('.reply-icon');
-        let startX = 0, startY = 0, dx = 0;
-        let active = false, triggered = false;
+        let startX = 0, startY = 0, dx = 0, active = false, triggered = false;
         const TRIGGER = 70, MAX = 90;
         inner.addEventListener('touchstart', e => {
             startX = e.touches[0].clientX; startY = e.touches[0].clientY;
             dx = 0; active = false; triggered = false; inner.classList.remove('dragging');
         }, { passive: true });
         inner.addEventListener('touchmove', e => {
-            const curX = e.touches[0].clientX, curY = e.touches[0].clientY;
-            const moveX = curX - startX, moveY = curY - startY;
+            const mx = e.touches[0].clientX - startX, my = e.touches[0].clientY - startY;
             if (!active) {
-                if (Math.abs(moveX) < 6 && Math.abs(moveY) < 6) return;
-                if (Math.abs(moveY) > Math.abs(moveX)) return;
-                if (moveX <= 0) return;
+                if (Math.abs(mx) < 6 && Math.abs(my) < 6) return;
+                if (Math.abs(my) > Math.abs(mx) || mx <= 0) return;
                 active = true; inner.classList.add('dragging');
             }
             e.preventDefault();
-            dx = Math.max(0, Math.min(moveX, MAX));
+            dx = Math.max(0, Math.min(mx, MAX));
             inner.style.transform = `translateX(${dx}px)`;
             icon.style.opacity = String(Math.min(dx / TRIGGER, 1));
             if (dx >= TRIGGER && !triggered) {
@@ -257,12 +328,18 @@ function attachSwipeListeners() {
             if (!active) return;
             active = false; inner.classList.remove('dragging');
             inner.style.transform = ''; icon.style.opacity = '0';
-            if (triggered) { const content = inner.dataset.content || ''; setReply(content); }
+            if (triggered) {
+                const content    = inner.dataset.content    || '';
+                const senderName = inner.dataset.senderName || '';
+                setReply(content, senderName);
+            }
         };
-        inner.addEventListener('touchend',   end, { passive: true });
+        inner.addEventListener('touchend',    end, { passive: true });
         inner.addEventListener('touchcancel', end, { passive: true });
     });
 }
+
+// ── SOUND / NOTIFICATIONS ─────────────────────────────────────────────────────
 function playMessageSound() {
     if (localStorage.getItem('disco_sound') === 'false') return;
     try {
@@ -291,13 +368,14 @@ function updateNavBadge(n) {
     if (n > 0) { b.textContent = n > 99 ? '99+' : n; b.style.display = 'flex'; }
     else b.style.display = 'none';
 }
+
+// ── SEEN ──────────────────────────────────────────────────────────────────────
 async function markMessagesAsSeen(senderId, receiverId) {
-    await sb.from('messages').update({ seen: true }).eq('sender_id', senderId).eq('receiver_id', receiverId).is('seen', null);
-}
-function tickHtml(isSent, seen) {
-    if (!isSent) return '';
-    if (seen) return `<span class="msg-tick double" title="Seen">✓✓</span>`;
-    else return `<span class="msg-tick single" title="Sent">✓</span>`;
+    await sb.from('messages')
+        .update({ seen: true })
+        .eq('sender_id', senderId)
+        .eq('receiver_id', receiverId)
+        .eq('seen', false);
 }
 function subscribeToSeenUpdates() {
     if (seenSubscription) sb.removeChannel(seenSubscription);
@@ -305,11 +383,116 @@ function subscribeToSeenUpdates() {
     seenSubscription = sb.channel(`seen-${currentUser.id}-${chatUser.id}`)
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `sender_id=eq.${currentUser.id}` }, payload => {
             if (payload.new?.seen === true) {
-                const msgEl = document.getElementById(`tick-${payload.new.id}`);
-                if (msgEl) { msgEl.className = 'msg-tick double'; msgEl.title = 'Seen'; msgEl.textContent = '✓✓'; }
+                const msgId = payload.new.id;
+                const msg = messagesCache.find(m => m.id === msgId);
+                if (msg) msg.seen = true;
+                const tickEl = document.getElementById(`tick-${msgId}`);
+                if (tickEl) {
+                    tickEl.className = 'msg-tick seen';
+                    tickEl.title = 'Seen';
+                    tickEl.innerHTML = '<i class="fas fa-check-double"></i>';
+                }
             }
         }).subscribe();
 }
+
+// ── RENDER ONE MESSAGE ────────────────────────────────────────────────────────
+function renderMessageHtml(m) {
+    const isSent = m.sender_id === currentUser.id;
+    const dir    = isSent ? 'sent' : 'received';
+
+    let fileHtml = '';
+    if (m.file_url) {
+        if (m.file_type === 'image')
+            fileHtml = `<div style="margin-top:8px;"><img src="${m.file_url}" style="max-width:220px;border-radius:10px;display:block;"></div>`;
+        else if (m.file_type === 'video')
+            fileHtml = `<div style="margin-top:8px;"><video controls style="max-width:220px;border-radius:10px;"><source src="${m.file_url}"></video></div>`;
+        else
+            fileHtml = `<div style="margin-top:6px;"><a href="${m.file_url}" target="_blank" style="color:#c49eff;font-size:13px;">📎 Download file</a></div>`;
+    }
+
+    // For quotes: we now store the name inside reply_to_content: "@Name: original text"
+    let quoteHtml = '';
+    if (m.reply_to_content) {
+        // Try to extract name if we stored it in the format "@Name: text", else just show the content
+        let quoteName = '';
+        let quoteText = m.reply_to_content;
+        const atMatch = m.reply_to_content.match(/^@([^:]+):\s*(.*)$/);
+        if (atMatch) {
+            quoteName = atMatch[1];
+            quoteText = atMatch[2];
+        } else {
+            // Fallback: try to determine based on who sent it
+            if (isSent) quoteName = chatUser?.name || '';
+            else quoteName = currentUser?.name || 'You';
+        }
+        const truncated = quoteText.length > 80 ? quoteText.substring(0, 80) + '…' : quoteText;
+        quoteHtml = `
+            <div class="reply-quote">
+                <div class="reply-quote-name">${escapeHtml(quoteName)}</div>
+                <div class="reply-quote-text">${escapeHtml(truncated)}</div>
+            </div>`;
+    }
+
+    const timeStr = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const safe    = (m.content || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    const safeName = escapeHtml(isSent ? (currentUser?.name || 'You') : (chatUser?.name || ''));
+
+    let tick = '';
+    if (isSent) {
+        if (m.seen === true) {
+            tick = `<span class="msg-tick seen" id="tick-${m.id}" title="Seen"><i class="fas fa-check-double"></i></span>`;
+        } else {
+            tick = `<span class="msg-tick" id="tick-${m.id}" title="Sent"><i class="fas fa-check"></i></span>`;
+        }
+    }
+
+    return `<div class="message ${dir}" data-msg-id="${m.id}">
+        <div class="swipe-wrapper">
+            <div class="reply-icon">↩</div>
+            <div class="bubble-inner" data-content="${safe}" data-sender-name="${safeName}">
+                <div class="message-bubble">
+                    ${quoteHtml}
+                    <span>${escapeHtml(m.content || '')}</span>
+                    ${fileHtml}
+                    <div class="message-meta">
+                        <span class="message-time">${timeStr}</span>
+                        ${tick}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>`;
+}
+
+// ── LOAD / RENDER ALL ─────────────────────────────────────────────────────────
+async function loadInitialMessages() {
+    const container = document.getElementById('chatMessages');
+    container.innerHTML = '<div class="empty-state">Loading messages...</div>';
+    const { data } = await sb.from('messages').select('*')
+        .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${chatUser.id}),and(sender_id.eq.${chatUser.id},receiver_id.eq.${currentUser.id})`)
+        .order('created_at', { ascending: true });
+    messagesCache = data || [];
+    if (!messagesCache.length) {
+        container.innerHTML = '<div class="empty-state">Say hello! 👋</div>';
+    } else {
+        container.innerHTML = messagesCache.map(m => renderMessageHtml(m)).join('');
+        container.scrollTop = container.scrollHeight;
+        attachSwipeListeners();
+    }
+}
+
+function appendMessageToChat(msg) {
+    if (messagesCache.some(m => m.id === msg.id)) return;
+    if (msg.sender_id === chatUser.id && !msg.seen) msg.seen = true;
+    messagesCache.push(msg);
+    const container = document.getElementById('chatMessages');
+    container.insertAdjacentHTML('beforeend', renderMessageHtml(msg));
+    container.scrollTop = container.scrollHeight;
+    attachSwipeListeners();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
 async function init() {
     const stored = localStorage.getItem('aou_user');
     if (stored) currentUser = JSON.parse(stored);
@@ -344,10 +527,12 @@ async function init() {
         localStorage.removeItem('chat_with');
     }
 }
+
 async function loadAllUsers() {
     const { data } = await sb.from('users').select('*').order('name');
     allUsers = (data || []).filter(u => u.id !== currentUser?.id && !u.is_admin);
 }
+
 async function loadConversations() {
     const { data: msgs } = await sb.from('messages').select('*')
         .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
@@ -384,85 +569,67 @@ async function loadConversations() {
             <div class="convo-avatar" style="position:relative;">${av}${badge}</div>
             <div class="convo-info">
                 <div class="convo-name">${escapeHtml(u.name)}</div>
-                <div class="convo-preview${hasUnread?' unread':''}">${escapeHtml(preview)}</div>
+                <div class="convo-preview${hasUnread ? ' unread' : ''}">${escapeHtml(preview)}</div>
             </div>
-            <div class="convo-meta"><span class="convo-time${hasUnread?' unread':''}">${formatConvoTime(c.lastTime)}</span></div>
+            <div class="convo-meta"><span class="convo-time${hasUnread ? ' unread' : ''}">${formatConvoTime(c.lastTime)}</span></div>
         </div>`;
     }).join('');
 }
+
 function formatConvoTime(iso) {
     if (!iso) return '';
-    const d = new Date(iso), now = new Date(), dm = Math.floor((now-d)/60000);
+    const d = new Date(iso), now = new Date(), dm = Math.floor((now - d) / 60000);
     if (dm < 1) return 'now'; if (dm < 60) return `${dm}m`;
-    const dh = Math.floor(dm/60); if (dh < 24) return `${dh}h`;
-    const dd = Math.floor(dh/24); if (dd < 7) return `${dd}d`;
-    return d.toLocaleDateString([],{day:'numeric',month:'short'});
+    const dh = Math.floor(dm / 60); if (dh < 24) return `${dh}h`;
+    const dd = Math.floor(dh / 24); if (dd < 7) return `${dd}d`;
+    return d.toLocaleDateString([], { day: 'numeric', month: 'short' });
 }
-window.showUserSelect = () => { document.getElementById('userSelectModal').classList.add('show'); renderUserList(allUsers.filter(u=>u.id!==currentUser.id)); };
+
+window.showUserSelect = () => { document.getElementById('userSelectModal').classList.add('show'); renderUserList(allUsers.filter(u => u.id !== currentUser.id)); };
 window.hideUserSelect = () => document.getElementById('userSelectModal').classList.remove('show');
 window.filterUserList = () => {
     const t = document.getElementById('userSearchInput').value.toLowerCase();
-    renderUserList(allUsers.filter(u => u.id!==currentUser.id && (u.name?.toLowerCase().includes(t)||u.school?.toLowerCase().includes(t))));
+    renderUserList(allUsers.filter(u => u.id !== currentUser.id && (u.name?.toLowerCase().includes(t) || u.school?.toLowerCase().includes(t))));
 };
 function renderUserList(users) {
     const c = document.getElementById('userSelectList');
-    if (!users.length) { c.innerHTML='<div class="empty-state">No users found</div>'; return; }
+    if (!users.length) { c.innerHTML = '<div class="empty-state">No users found</div>'; return; }
     c.innerHTML = users.map(u => `<div class="user-list-item" onclick="selectUser('${u.id}')">
-        <div class="user-list-avatar">${u.avatar_url?`<img src="${u.avatar_url}">`:(u.initials||'?')}</div>
-        <div><div class="user-list-name">${escapeHtml(u.name)}</div><div class="user-list-details">${escapeHtml(u.school||'')} · ${escapeHtml(u.class||'')}</div></div>
+        <div class="user-list-avatar">${u.avatar_url ? `<img src="${u.avatar_url}">` : (u.initials || '?')}</div>
+        <div><div class="user-list-name">${escapeHtml(u.name)}</div><div class="user-list-details">${escapeHtml(u.school || '')} · ${escapeHtml(u.class || '')}</div></div>
     </div>`).join('');
 }
-window.selectUser = id => { chatUser = allUsers.find(u=>u.id===id); hideUserSelect(); openChatModal(); };
-window.openChatWithUser = id => { chatUser = allUsers.find(u=>u.id===id); openChatModal(); };
+window.selectUser    = id => { chatUser = allUsers.find(u => u.id === id); hideUserSelect(); openChatModal(); };
+window.openChatWithUser = id => { chatUser = allUsers.find(u => u.id === id); openChatModal(); };
+
 function openChatModal() {
     if (!chatUser) return;
     document.getElementById('chatTitle').textContent = chatUser.name;
     document.getElementById('chatModal').classList.add('show');
     markRead(chatUser.id);
     markMessagesAsSeen(chatUser.id, currentUser.id);
-    loadMessages();
-    subscribeToSeenUpdates();
     if (messagesSubscription) sb.removeChannel(messagesSubscription);
+    loadInitialMessages();
+    subscribeToSeenUpdates();
     messagesSubscription = sb.channel(`chat-${currentUser.id}-${chatUser.id}`)
-        .on('postgres_changes', { event:'INSERT', schema:'public', table:'messages', filter:`receiver_id=eq.${currentUser.id}` }, payload => {
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${currentUser.id}` }, payload => {
             if (payload.new?.sender_id === chatUser.id) {
-                markRead(chatUser.id);
                 sb.from('messages').update({ seen: true }).eq('id', payload.new.id).then(() => {});
-                loadMessages();
+                appendMessageToChat(payload.new);
                 playMessageSound();
+                markRead(chatUser.id);
                 if (document.visibilityState !== 'visible')
                     showBrowserNotification(`New message from ${chatUser.name}`, payload.new.content || '📎 Attachment');
             }
         }).subscribe();
 }
+
 function markRead(id) {
     lastReadAt[id] = new Date().toISOString();
     localStorage.setItem('aou_last_read', JSON.stringify(lastReadAt));
 }
-async function loadMessages() {
-    const container = document.getElementById('chatMessages');
-    const { data } = await sb.from('messages').select('*')
-        .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${chatUser.id}),and(sender_id.eq.${chatUser.id},receiver_id.eq.${currentUser.id})`)
-        .order('created_at', { ascending: true });
-    if (!data?.length) { container.innerHTML = '<div class="empty-state">Say hello! 👋</div>'; return; }
-    container.innerHTML = data.map(m => {
-        const isSent = m.sender_id === currentUser.id;
-        const dir = isSent ? 'sent' : 'received';
-        let fileHtml = '';
-        if (m.file_url) {
-            if (m.file_type==='image') fileHtml = `<div style="margin-top:8px;"><img src="${m.file_url}" style="max-width:220px;border-radius:12px;display:block;"></div>`;
-            else if (m.file_type==='video') fileHtml = `<div style="margin-top:8px;"><video controls style="max-width:220px;border-radius:12px;"><source src="${m.file_url}"></video></div>`;
-            else fileHtml = `<div style="margin-top:8px;"><a href="${m.file_url}" target="_blank" style="color:#a070ff;">📎 Download file</a></div>`;
-        }
-        const quoteHtml = m.reply_to_content ? `<div class="reply-quote">↩ ${escapeHtml(m.reply_to_content)}</div>` : '';
-        const timeStr = new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-        const safe = (m.content||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;');
-        const tick = isSent ? `<span class="msg-tick ${m.seen ? 'double' : 'single'}" id="tick-${m.id}" title="${m.seen ? 'Seen' : 'Sent'}">${m.seen ? '✓✓' : '✓'}</span>` : '';
-        return `<div class="message ${dir}"><div class="swipe-wrapper"><div class="reply-icon">↩</div><div class="bubble-inner" data-content="${safe}"><div class="message-bubble">${quoteHtml}${escapeHtml(m.content||'')}${fileHtml}</div><div class="message-meta"><span class="message-time">${timeStr}</span>${tick}</div></div></div></div>`;
-    }).join('');
-    container.scrollTop = container.scrollHeight;
-    attachSwipeListeners();
-}
+
+// ── SEND (fixed: no extra column, store name inside reply_to_content if needed) ──
 window.handleFileSelect = e => {
     const f = e.target.files[0]; if (!f) return;
     selectedFile = f;
@@ -485,31 +652,70 @@ window.sendMessage = async () => {
         const ext = selectedFile.name.split('.').pop();
         const path = `${currentUser.id}/${Date.now()}.${ext}`;
         const { error: upErr } = await sb.storage.from('chat').upload(path, selectedFile);
-        if (upErr) { showToast('File upload failed','error'); btn.disabled=false; return; }
+        if (upErr) { showToast('File upload failed', 'error'); btn.disabled = false; return; }
         fileUrl = sb.storage.from('chat').getPublicUrl(path).data.publicUrl;
         fileType = selectedFile.type.startsWith('image/') ? 'image' : selectedFile.type.startsWith('video/') ? 'video' : 'file';
     }
-    const payload = { sender_id: currentUser.id, receiver_id: chatUser.id, content: content || '', file_url: fileUrl, file_type: fileType, seen: false };
-    if (replyToContent) payload.reply_to_content = replyToContent;
-    const { error } = await sb.from('messages').insert(payload);
-    if (error) { showToast('Failed to send message','error'); btn.disabled=false; return; }
+    const payload = {
+        sender_id: currentUser.id,
+        receiver_id: chatUser.id,
+        content: content || '',
+        file_url: fileUrl,
+        file_type: fileType,
+        seen: false
+    };
+    // Only add reply_to_content – no extra column
+    if (replyToContent) {
+        // Optionally embed the sender name into the quoted text for display
+        const namePrefix = replyToSenderName ? `@${replyToSenderName}: ` : '';
+        payload.reply_to_content = namePrefix + replyToContent;
+    }
+
+    // Optimistic append
+    const tempId = 'temp_' + Date.now();
+    const optimistic = { id: tempId, ...payload, created_at: new Date().toISOString() };
+    appendMessageToChat(optimistic);
     input.value = '';
     removeAttachment();
     clearReply();
+
+    const { data: realMsg, error } = await sb.from('messages').insert(payload).select().single();
+    if (error) {
+        showToast('Failed to send message: ' + (error.message || ''), 'error');
+        console.error('Send error:', error);
+        messagesCache = messagesCache.filter(m => m.id !== tempId);
+        const optDiv = document.querySelector(`.message[data-msg-id="${tempId}"]`);
+        if (optDiv) optDiv.remove();
+        btn.disabled = false;
+        return;
+    }
+    // Replace optimistic with real
+    const idx = messagesCache.findIndex(m => m.id === tempId);
+    if (idx !== -1) messagesCache[idx] = realMsg;
+    const optDiv = document.querySelector(`.message[data-msg-id="${tempId}"]`);
+    if (optDiv) { optDiv.outerHTML = renderMessageHtml(realMsg); attachSwipeListeners(); }
     btn.disabled = false;
-    loadMessages();
 };
-window.handleKeyPress = e => { if (e.key==='Enter') sendMessage(); };
+window.handleKeyPress = e => { if (e.key === 'Enter') sendMessage(); };
 window.closeChat = () => {
     document.getElementById('chatModal').classList.remove('show');
-    if (messagesSubscription) { sb.removeChannel(messagesSubscription); messagesSubscription=null; }
-    if (seenSubscription) { sb.removeChannel(seenSubscription); seenSubscription=null; }
-    chatUser = null; clearReply(); loadConversations();
+    if (messagesSubscription) { sb.removeChannel(messagesSubscription); messagesSubscription = null; }
+    if (seenSubscription)     { sb.removeChannel(seenSubscription);     seenSubscription = null; }
+    chatUser = null; messagesCache = []; clearReply(); loadConversations();
 };
-function escapeHtml(t) { const d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
+
+function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
 init();
 </script>
+
 <script src="heartbeat.js"></script>
-<script> if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').then(() => console.log('Service Worker registered')).catch(err => console.log('SW registration failed:', err)); } </script>
+<script>
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+        .then(() => console.log('Service Worker registered'))
+        .catch(err => console.log('SW registration failed:', err));
+}
+</script>
 </body>
 </html>
