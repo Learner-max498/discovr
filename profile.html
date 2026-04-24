@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Disco">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<meta name="theme-color" content="#000000">
+<title>Discovr – Profile</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+    --bg: #000;
+    --surface: rgba(128,0,255,0.08);
+    --surface2: rgba(128,0,255,0.12);
+    --border: rgba(128,0,255,0.22);
+    --primary: #8c36ff;
+    --text: white;
+    --text-secondary: #c7b2ff;
+    --nav-bg: rgba(0,0,0,0.95);
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 70px;
+}
+.container { max-width:500px; margin:0 auto; padding:20px; position:relative; z-index:10; }
+.header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; }
+.header h1 { font-family: 'Space Grotesk', sans-serif; font-size:28px; font-weight:700; color:var(--text); }
+.feedback-btn { background:transparent; border:1px solid var(--primary); border-radius:20px; color:var(--primary); padding:8px 14px; font-size:13px; cursor:pointer; }
+.profile-card { background:var(--surface); border:1px solid var(--border); border-radius:24px; padding:30px 20px; text-align:center; margin-bottom:24px; }
+.profile-avatar-container { position:relative; width:100px; height:100px; margin:0 auto 16px; cursor:pointer; }
+.profile-avatar { width:100px; height:100px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; font-weight:600; font-size:36px; overflow:hidden; }
+.profile-avatar img { width:100%; height:100%; object-fit:cover; }
+.avatar-overlay { position:absolute; bottom:0; right:0; width:32px; height:32px; background:var(--primary); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; border:2px solid var(--bg); }
+.profile-name { font-size:22px; font-weight:600; margin-bottom:8px; }
+.profile-email { font-size:14px; color:var(--text-secondary); margin-bottom:16px; }
+.profile-details { display:flex; justify-content:center; gap:24px; flex-wrap:wrap; }
+.detail-item { text-align:center; }
+.detail-label { font-size:12px; color:var(--text-secondary); margin-bottom:4px; }
+.detail-value { font-size:15px; font-weight:500; color:var(--primary); }
+.edit-section { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:20px; }
+.edit-title { font-size:16px; font-weight:600; margin-bottom:20px; }
+.input-group { margin-bottom:16px; }
+.input-group label { display:block; font-size:13px; color:var(--text-secondary); margin-bottom:6px; }
+.input-group input, .input-group select { width:100%; padding:14px; background:var(--surface2); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:15px; outline:none; }
+.save-btn { width:100%; padding:16px; background:var(--primary); border:none; border-radius:12px; color:white; font-weight:600; cursor:pointer; }
+.logout-btn { width:100%; padding:16px; background:transparent; border:1px solid #FF4444; border-radius:12px; color:#FF4444; font-weight:600; cursor:pointer; margin-top:16px; }
+.footer { text-align:center; padding:20px 0 10px; margin-top:20px; }
+.pw-logo { display:inline-flex; align-items:center; justify-content:center; gap:2px; animation:footerFloat 3s infinite; }
+.w-small { display:inline-block; font-size:1.8rem; font-weight:900; letter-spacing:-2px; transform:scaleX(1.2); color:var(--primary); text-shadow:0 0 8px rgba(140,54,255,0.5); line-height:1; }
+.p-small { display:inline-block; font-size:1.8rem; font-weight:900; margin-left:-3px; position:relative; color:var(--primary); text-shadow:0 0 8px rgba(140,54,255,0.5); line-height:1; }
+.p-small::before { content:""; position:absolute; top:-6px; left:2px; width:7px; height:7px; background:var(--primary); border-radius:50%; box-shadow:0 0 10px var(--primary); }
+@keyframes footerFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-2px)} }
+.modal { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.9); z-index:2000; align-items:center; justify-content:center; padding:20px; }
+.modal.show { display:flex; }
+.modal-content { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:24px; width:100%; max-width:400px; backdrop-filter:blur(10px); }
+.modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+.modal-header h2 { font-size:20px; font-weight:600; color:var(--primary); }
+.close-btn { background:none; border:none; color:var(--text-secondary); font-size:24px; cursor:pointer; }
+.modal textarea { width:100%; padding:14px; background:var(--surface2); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:14px; min-height:120px; resize:vertical; margin-bottom:16px; }
+.modal button[type="submit"] { width:100%; padding:14px; background:var(--primary); border:none; border-radius:12px; color:white; font-weight:600; cursor:pointer; }
+.bottom-nav { position:fixed; bottom:0; left:0; right:0; max-width:500px; margin:0 auto; background:var(--nav-bg); border-top:1px solid var(--border); display:flex; justify-content:space-around; padding:12px; backdrop-filter:blur(10px); }
+.nav-item { display:flex; flex-direction:column; align-items:center; color:var(--text-secondary); text-decoration:none; font-size:12px; position:relative; }
+.nav-item.active { color:var(--primary); }
+.nav-icon { font-size:22px; line-height:1; margin-bottom:2px; }
+.nav-icon i { display:block; }
+.nav-item.active .nav-icon i { color:var(--primary); text-shadow:0 0 4px var(--primary); }
+.nav-badge { position:absolute; top:-4px; right:20px; min-width:18px; height:18px; background:#25D366; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:white; padding:0 4px; border:2px solid var(--bg); }
+.toast { position:fixed; bottom:30px; left:50%; transform:translateX(-50%); padding:12px 24px; background:var(--surface); border-radius:30px; font-size:14px; z-index:3000; border:1px solid var(--border); }
+.toast.success { background:#00CC00; color:white; }
+.toast.error { background:#FF4444; color:white; }
+#avatarUpload { display:none; }
+.bg { position:fixed; inset:0; z-index:0; background:#000; overflow:hidden; }
+.leak { position:absolute; width:100%; height:350px; top:0; left:0; background:linear-gradient(180deg, rgba(128,0,255,0.12) 0%, transparent 100%); }
+.bottom-glow { position:fixed; bottom:0; left:0; right:0; height:200px; background:linear-gradient(0deg, rgba(128,0,255,0.08) 0%, transparent 100%); z-index:1; pointer-events:none; }
+</style>
+</head>
+<body>
+<div class="bg"><div class="leak"></div></div>
+<div class="bottom-glow"></div>
+<div class="container">
+    <div class="header"><button class="feedback-btn" onclick="openFeedbackModal()">💬 Feedback</button><h1>Discovr</h1><div style="width:80px;"></div></div>
+    <div class="profile-card">
+        <div class="profile-avatar-container" onclick="document.getElementById('avatarUpload').click()">
+            <div class="profile-avatar" id="profileAvatarContainer"><img id="profileAvatarImg" style="display:none;"><span id="profileAvatarText">?</span></div>
+            <div class="avatar-overlay">📷</div>
+        </div>
+        <input type="file" id="avatarUpload" accept="image/*" onchange="uploadAvatar(event)">
+        <div class="profile-name" id="profileName">Loading...</div>
+        <div class="profile-email" id="profileEmail"></div>
+        <div class="profile-details">
+            <div class="detail-item"><div class="detail-label">School</div><div class="detail-value" id="profileSchool">-</div></div>
+            <div class="detail-item"><div class="detail-label">Class</div><div class="detail-value" id="profileClass">-</div></div>
+            <div class="detail-item"><div class="detail-label">Department</div><div class="detail-value" id="profileDept">-</div></div>
+        </div>
+    </div>
+    <div class="edit-section">
+        <div class="edit-title">Edit Profile</div>
+        <div class="input-group"><label>School</label><input type="text" id="editSchool" placeholder="Your school name"></div>
+        <div class="input-group"><label>Class</label><select id="editClass"><option>JSS1</option><option>JSS2</option><option>JSS3</option><option>SS1</option><option>SS2</option><option>SS3</option></select></div>
+        <div class="input-group"><label>Department</label><select id="editDept"><option>Science</option><option>Art</option><option>Commercial</option></select></div>
+        <button class="save-btn" onclick="saveProfile()">Save Changes</button>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+    <div class="footer"><div class="pw-logo"><span class="w-small">W</span><span class="p-small">P</span></div></div>
+</div>
+<div class="modal" id="feedbackModal">
+    <div class="modal-content"><div class="modal-header"><h2>Send Feedback</h2><button class="close-btn" onclick="closeFeedbackModal()">&times;</button></div><form onsubmit="submitFeedback(event)"><textarea id="feedbackMessage" placeholder="Your feedback..." required></textarea><button type="submit" id="feedbackSubmitBtn">Send Feedback</button></form></div>
+</div>
+<div class="bottom-nav">
+    <a href="everyone.html" class="nav-item"><div class="nav-icon"><i class="fas fa-users"></i></div><span>Everyone</span></a>
+    <a href="posts.html" class="nav-item"><div class="nav-icon"><i class="fas fa-plus-circle"></i></div><span>Posts</span></a>
+    <a href="chat.html" class="nav-item" id="chatNavItem"><div class="nav-icon"><i class="fas fa-comment-dots"></i></div><span>Chats</span><span class="nav-badge" id="chatNavBadge" style="display:none;">0</span></a>
+    <a href="profile.html" class="nav-item active"><div class="nav-icon"><i class="fas fa-user-circle"></i></div><span>Profile</span></a>
+</div>
+<script>
+const sb = window.supabase.createClient('https://oyeojlvrjhaymbhohxdq.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im95ZW9qbHZyamhheW1iaG9oeGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNzMxNDYsImV4cCI6MjA5MDk0OTE0Nn0.aL-Y0hXjfpSIfqnwX-CDhoYLu5fsaMZPr6wW_VxxYj8');
+const MAX_AVATAR_SIZE = 50 * 1024 * 1024;
+let currentUser = null, unreadSubscription = null;
+function showToast(msg, type) {
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+}
+async function init() {
+    const stored = localStorage.getItem('aou_user');
+    if (stored) currentUser = JSON.parse(stored);
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { window.location.href = 'index.html'; return; }
+    if (!currentUser) {
+        const { data: user } = await sb.from('users').select('*').eq('id', session.user.id).single();
+        if (user) { currentUser = user; localStorage.setItem('aou_user', JSON.stringify(user)); }
+    }
+    loadProfile();
+    await updateUnreadBadge();
+    subscribeToUnread();
+}
+function loadProfile() {
+    if (!currentUser) return;
+    const txt = document.getElementById('profileAvatarText'), img = document.getElementById('profileAvatarImg');
+    if (currentUser.avatar_url) {
+        img.src = currentUser.avatar_url;
+        img.style.display = 'block';
+        txt.style.display = 'none';
+    } else {
+        img.style.display = 'none';
+        txt.style.display = 'inline';
+        txt.textContent = currentUser.initials || currentUser.name?.charAt(0) || '?';
+    }
+    document.getElementById('profileName').textContent = currentUser.name || 'User';
+    document.getElementById('profileEmail').textContent = currentUser.email || '';
+    document.getElementById('profileSchool').textContent = currentUser.school || 'Not set';
+    document.getElementById('profileClass').textContent = currentUser.class || 'Not set';
+    document.getElementById('profileDept').textContent = currentUser.department || 'Not set';
+    document.getElementById('editSchool').value = currentUser.school || '';
+    document.getElementById('editClass').value = currentUser.class || 'JSS1';
+    document.getElementById('editDept').value = currentUser.department || 'Science';
+}
+window.uploadAvatar = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > MAX_AVATAR_SIZE) { showToast('File exceeds 50MB limit', 'error'); return; }
+    const ext = file.name.split('.').pop();
+    const path = `${currentUser.id}/${Date.now()}.${ext}`;
+    const { error } = await sb.storage.from('avatars').upload(path, file, { upsert: true });
+    if (error) { showToast('Upload failed', 'error'); return; }
+    const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(path);
+    await sb.from('users').update({ avatar_url: publicUrl }).eq('id', currentUser.id);
+    currentUser.avatar_url = publicUrl;
+    localStorage.setItem('aou_user', JSON.stringify(currentUser));
+    loadProfile();
+    showToast('Profile picture updated!', 'success');
+};
+window.saveProfile = async () => {
+    const school = document.getElementById('editSchool').value.trim();
+    const cls = document.getElementById('editClass').value;
+    const dept = document.getElementById('editDept').value;
+    if (!school) { showToast('School required', 'error'); return; }
+    await sb.from('users').update({ school, class: cls, department: dept }).eq('id', currentUser.id);
+    currentUser.school = school;
+    currentUser.class = cls;
+    currentUser.department = dept;
+    localStorage.setItem('aou_user', JSON.stringify(currentUser));
+    loadProfile();
+    showToast('Profile updated!', 'success');
+};
+window.openFeedbackModal = () => document.getElementById('feedbackModal').classList.add('show');
+window.closeFeedbackModal = () => document.getElementById('feedbackModal').classList.remove('show');
+window.submitFeedback = async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('feedbackMessage').value.trim();
+    if (!msg) return;
+    const btn = document.getElementById('feedbackSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    const { error } = await sb.from('feedbacks').insert({
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        user_email: currentUser.email,
+        message: msg
+    });
+    btn.disabled = false;
+    btn.textContent = 'Send Feedback';
+    if (error) { showToast('Failed to send feedback', 'error'); return; }
+    closeFeedbackModal();
+    document.getElementById('feedbackMessage').value = '';
+    showToast('Feedback sent!', 'success');
+};
+async function updateUnreadBadge() {
+    if (!currentUser) return;
+    const lr = localStorage.getItem('aou_last_read') || '{}';
+    const lastReadAt = JSON.parse(lr);
+    const { data: msgs } = await sb.from('messages').select('*').eq('receiver_id', currentUser.id);
+    let total = 0;
+    (msgs || []).forEach(m => { if (m.created_at > (lastReadAt[m.sender_id] || '1970-01-01')) total++; });
+    const badge = document.getElementById('chatNavBadge');
+    if (total > 0) {
+        badge.textContent = total > 99 ? '99+' : total;
+        badge.style.display = 'flex';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+function subscribeToUnread() {
+    if (unreadSubscription) sb.removeChannel(unreadSubscription);
+    unreadSubscription = sb.channel('unread-profile')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${currentUser.id}` }, updateUnreadBadge)
+        .subscribe();
+}
+window.logout = async () => {
+    await sb.auth.signOut();
+    localStorage.removeItem('aou_user');
+    window.location.href = 'index.html';
+};
+init();
+</script>
+<script> if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').then(() => console.log('Service Worker registered')).catch((err) => console.log('SW registration failed:', err)); } </script>
+</body>
+</html>

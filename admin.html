@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- PWA Manifest -->
+<link rel="manifest" href="/manifest.json">
+
+<!-- iOS / Safari Home Screen Icon -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Disco">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+
+<!-- Theme Color for browser UI -->
+<meta name="theme-color" content="#0e1a26">
+<title>Disco – Admin Panel</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0a0a0a;
+    color: white;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.container { max-width: 700px; width: 100%; margin: 0 auto; }
+
+/* Login Screen */
+.login-container {
+    max-width: 400px;
+    margin: 0 auto;
+    background: #111;
+    border-radius: 24px;
+    padding: 32px;
+    border: 1px solid #222;
+}
+.login-container h1 { text-align: center; margin-bottom: 30px; color: #3B5BFF; font-size: 28px; }
+.login-container input {
+    width: 100%; padding: 14px 16px; margin-bottom: 16px;
+    background: #1a1a1a; border: 1px solid #333; border-radius: 12px;
+    color: white; font-size: 15px; outline: none;
+}
+.login-container button {
+    width: 100%; padding: 16px; background: #3B5BFF; color: white;
+    border: none; border-radius: 12px; font-size: 16px; font-weight: 600;
+    cursor: pointer;
+}
+.login-container button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Admin Panel */
+.admin-panel { display: none; }
+.header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #222;
+}
+.header h1 { font-size: 26px; font-weight: 700; color: #3B5BFF; }
+.logout-btn {
+    padding: 8px 16px; background: transparent; border: 1px solid #FF4444;
+    border-radius: 20px; color: #FF4444; cursor: pointer; font-size: 13px;
+}
+.stats-bar {
+    display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
+}
+.stat-item {
+    flex: 1; min-width: 100px; background: #111; padding: 14px 16px;
+    border-radius: 16px; border: 1px solid #222; text-align: center;
+    cursor: pointer; transition: border-color 0.2s;
+}
+.stat-item:hover { border-color: #3B5BFF; }
+.stat-value { font-size: 24px; font-weight: 700; color: #3B5BFF; }
+.stat-label { font-size: 12px; color: #888; margin-top: 4px; }
+
+.section-title {
+    font-size: 18px; font-weight: 600; margin: 24px 0 16px;
+    display: flex; align-items: center; gap: 10px;
+}
+.section-title span { color: #3B5BFF; }
+
+.controls {
+    display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;
+}
+.search-box { flex: 1; min-width: 180px; }
+.search-box input {
+    width: 100%; padding: 14px 16px; background: #1a1a1a;
+    border: 1px solid #333; border-radius: 12px; color: white;
+    font-size: 14px; outline: none;
+}
+.bulk-actions { display: flex; gap: 8px; }
+.bulk-btn {
+    padding: 12px 16px; background: #1a1a1a; border: 1px solid #333;
+    border-radius: 12px; color: white; font-size: 13px; font-weight: 600;
+    cursor: pointer; white-space: nowrap;
+}
+.bulk-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.bulk-btn.danger { background: #2a1a1a; border-color: #FF4444; color: #FF4444; }
+.bulk-btn.success { background: #1a2a1a; border-color: #00CC00; color: #00CC00; }
+
+.user-list, .feedback-list {
+    background: #111; border: 1px solid #222; border-radius: 20px;
+    max-height: 300px; overflow-y: auto; margin-bottom: 20px;
+}
+.list-item {
+    display: flex; align-items: flex-start; gap: 14px; padding: 16px;
+    border-bottom: 1px solid #222; cursor: pointer;
+}
+.list-item:hover { background: #161616; }
+.list-item.selected { background: #1a2233; }
+.item-checkbox { width: 22px; height: 22px; accent-color: #3B5BFF; cursor: pointer; margin-top: 4px; }
+.item-avatar {
+    width: 44px; height: 44px; border-radius: 50%; background: #3B5BFF;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: 16px; overflow: hidden; flex-shrink: 0;
+}
+.item-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.item-info { flex: 1; min-width: 0; }
+.item-name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.item-name { font-weight: 600; font-size: 16px; color: #fff; }
+.item-email { font-size: 13px; color: #aaa; margin-bottom: 4px; }
+.item-message {
+    font-size: 15px; color: #ddd; line-height: 1.5; margin-bottom: 6px;
+    word-break: break-word;
+}
+.item-meta { font-size: 12px; color: #888; }
+.badge { padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+.badge.admin { background: #3B5BFF; color: white; }
+.badge.disabled { background: #FF4444; color: white; }
+.badge.unread { background: #FFAA00; color: black; }
+.status-indicator {
+    display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+    margin-right: 6px;
+}
+.status-online { background: #00CC00; box-shadow: 0 0 8px #00CC00; }
+.status-offline { background: #666; }
+
+.select-all-bar {
+    display: flex; align-items: center; gap: 12px; padding: 10px 16px;
+    border-bottom: 1px solid #222;
+}
+.select-all-bar input { width: 22px; height: 22px; accent-color: #3B5BFF; }
+.selected-count { font-size: 13px; color: #888; }
+
+.loading-spinner {
+    display: inline-block; width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.2); border-top-color: #3B5BFF;
+    border-radius: 50%; animation: spin 0.6s linear infinite;
+    margin-right: 8px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.list-loading { text-align: center; padding: 40px; color: #888; }
+.toast {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    padding: 12px 24px; border-radius: 30px; font-size: 14px; font-weight: 600;
+    z-index: 10000; background: #0D1117; color: white;
+}
+.toast.success { background: #1B5E20; }
+.toast.error { background: #C62828; }
+
+/* WP Logo */
+.wp-footer {
+    margin-top: 30px;
+    text-align: center;
+}
+.pw-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    animation: footerFloat 3s ease-in-out infinite;
+}
+.w-small {
+    display: inline-block;
+    font-size: 1.8rem;
+    font-weight: 900;
+    letter-spacing: -2px;
+    transform: scaleX(1.2);
+    color: #3B5BFF;
+    text-shadow: 0 0 5px rgba(59, 91, 255, 0.3);
+    line-height: 1;
+}
+.p-small {
+    display: inline-block;
+    font-size: 1.8rem;
+    font-weight: 900;
+    margin-left: -3px;
+    position: relative;
+    color: #3B5BFF;
+    text-shadow: 0 0 5px rgba(59, 91, 255, 0.3);
+    line-height: 1;
+}
+.p-small::before {
+    content: "";
+    position: absolute;
+    top: -6px;
+    left: 2px;
+    width: 7px;
+    height: 7px;
+    background: #3B5BFF;
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(59, 91, 255, 0.5);
+}
+@keyframes footerFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-2px); }
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-container">
+        <h1>Admin Login</h1>
+        <input type="email" id="adminEmail" placeholder="Admin Email" autocomplete="email">
+        <input type="password" id="adminPassword" placeholder="Password" autocomplete="current-password">
+        <button id="loginBtn" onclick="adminLogin()">Sign In →</button>
+        <div style="text-align:center;margin-top:16px;font-size:13px;color:#888;">
+            <a href="index.html" style="color:#3B5BFF;">← Back to app</a>
+        </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="adminPanel" class="admin-panel">
+        <div class="header">
+            <h1>Admin Panel</h1>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+
+        <!-- Stats Bar (Clickable) -->
+        <div class="stats-bar">
+            <div class="stat-item" onclick="scrollToSection('users')">
+                <div class="stat-value" id="totalUsers">-</div>
+                <div class="stat-label">Total Users</div>
+            </div>
+            <div class="stat-item" onclick="scrollToSection('users')">
+                <div class="stat-value" id="activeUsers">-</div>
+                <div class="stat-label">Active</div>
+            </div>
+            <div class="stat-item" onclick="scrollToSection('users')">
+                <div class="stat-value" id="disabledUsers">-</div>
+                <div class="stat-label">Disabled</div>
+            </div>
+            <div class="stat-item" onclick="scrollToSection('users')">
+                <div class="stat-value" id="onlineNow">-</div>
+                <div class="stat-label">Online Now</div>
+            </div>
+            <div class="stat-item" onclick="scrollToSection('feedbacks')">
+                <div class="stat-value" id="totalFeedbacks">-</div>
+                <div class="stat-label">Feedbacks</div>
+            </div>
+            <div class="stat-item" onclick="scrollToSection('feedbacks')">
+                <div class="stat-value" id="unreadFeedbacks">-</div>
+                <div class="stat-label">Unread</div>
+            </div>
+        </div>
+
+        <!-- Users Section -->
+        <div id="usersSection">
+            <div class="section-title"><span>👥</span> Users</div>
+            <div class="controls">
+                <div class="search-box">
+                    <input type="text" id="userSearchInput" placeholder="Search by name or email" oninput="filterUsers()">
+                </div>
+                <div class="bulk-actions">
+                    <button class="bulk-btn" id="bulkDisableBtn" onclick="bulkDisable()">Disable</button>
+                    <button class="bulk-btn success" id="bulkEnableBtn" onclick="bulkEnable()">Enable</button>
+                    <button class="bulk-btn danger" id="bulkDeleteBtn" onclick="bulkDelete()">Delete</button>
+                </div>
+            </div>
+            <div class="user-list">
+                <div class="select-all-bar">
+                    <input type="checkbox" id="selectAllUsersCheckbox" onchange="toggleSelectAllUsers()">
+                    <span class="selected-count" id="selectedUsersCount">0 selected</span>
+                    <span id="userListLoadingIndicator" style="margin-left: auto; display: none;">
+                        <span class="loading-spinner"></span> Loading...
+                    </span>
+                </div>
+                <div id="userList"></div>
+            </div>
+        </div>
+
+        <!-- Feedbacks Section -->
+        <div id="feedbacksSection">
+            <div class="section-title"><span>💬</span> Feedback</div>
+            <div class="controls">
+                <div class="search-box">
+                    <input type="text" id="feedbackSearchInput" placeholder="Search feedback..." oninput="filterFeedbacks()">
+                </div>
+                <div class="bulk-actions">
+                    <button class="bulk-btn success" onclick="bulkMarkRead()">Mark Read</button>
+                    <button class="bulk-btn" onclick="bulkMarkUnread()">Mark Unread</button>
+                    <button class="bulk-btn danger" onclick="bulkDeleteFeedbacks()">Delete</button>
+                </div>
+            </div>
+            <div class="feedback-list">
+                <div class="select-all-bar">
+                    <input type="checkbox" id="selectAllFeedbacksCheckbox" onchange="toggleSelectAllFeedbacks()">
+                    <span class="selected-count" id="selectedFeedbacksCount">0 selected</span>
+                    <span id="feedbackListLoadingIndicator" style="margin-left: auto; display: none;">
+                        <span class="loading-spinner"></span> Loading...
+                    </span>
+                </div>
+                <div id="feedbackList"></div>
+            </div>
+        </div>
+
+        <!-- WP Logo -->
+        <div class="wp-footer">
+            <div class="pw-logo">
+                <span class="w-small">W</span>
+                <span class="p-small">P</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const sb = window.supabase.createClient(
+    'https://oyeojlvrjhaymbhohxdq.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im95ZW9qbHZyamhheW1iaG9oeGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNzMxNDYsImV4cCI6MjA5MDk0OTE0Nn0.aL-Y0hXjfpSIfqnwX-CDhoYLu5fsaMZPr6wW_VxxYj8'
+);
+
+let currentUser = null;
+let allUsers = [];
+let allFeedbacks = [];
+let selectedUserIds = new Set();
+let selectedFeedbackIds = new Set();
+let isLoadingUsers = false;
+let isLoadingFeedbacks = false;
+
+// UI Helpers
+function setUsersLoading(loading) {
+    isLoadingUsers = loading;
+    document.getElementById('userListLoadingIndicator').style.display = loading ? 'inline-flex' : 'none';
+    ['bulkDisableBtn', 'bulkEnableBtn', 'bulkDeleteBtn', 'selectAllUsersCheckbox'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = loading;
+    });
+}
+function setFeedbacksLoading(loading) {
+    isLoadingFeedbacks = loading;
+    document.getElementById('feedbackListLoadingIndicator').style.display = loading ? 'inline-flex' : 'none';
+}
+function showToast(msg, type = 'info') {
+    const existing = document.querySelector('.toast');
+    if (existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+function isOnline(lastSeen) {
+    if (!lastSeen) return false;
+    return (Date.now() - new Date(lastSeen).getTime()) < 2 * 60 * 1000;
+}
+function formatLastSeen(lastSeen) {
+    if (!lastSeen) return 'Never';
+    if (isOnline(lastSeen)) return 'Online now';
+    const diffMins = Math.floor((Date.now() - new Date(lastSeen)) / 60000);
+    if (diffMins < 60) return `${diffMins} min ago`;
+    if (diffMins < 1440) return `${Math.floor(diffMins / 60)} hours ago`;
+    return new Date(lastSeen).toLocaleDateString();
+}
+
+window.scrollToSection = (section) => {
+    document.getElementById(section + 'Section').scrollIntoView({ behavior: 'smooth' });
+};
+
+// ─── ADMIN LOGIN ─────────────────────────────────────────────────────────────
+window.adminLogin = async () => {
+    const email = document.getElementById('adminEmail').value.trim();
+    const password = document.getElementById('adminPassword').value;
+    if (!email || !password) { showToast('Enter email and password', 'error'); return; }
+
+    const loginBtn = document.getElementById('loginBtn');
+    loginBtn.disabled = true;
+    loginBtn.innerHTML = '<span class="loading-spinner"></span>Signing in...';
+
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) {
+        loginBtn.disabled = false; loginBtn.textContent = 'Sign In →';
+        showToast(error.message, 'error'); return;
+    }
+
+    const { data: profile } = await sb.from('users').select('id, email, name, is_admin, disabled').eq('id', data.user.id).single();
+    if (!profile?.is_admin || profile.disabled) {
+        await sb.auth.signOut();
+        loginBtn.disabled = false; loginBtn.textContent = 'Sign In →';
+        showToast('Access denied.', 'error'); return;
+    }
+
+    localStorage.setItem('aou_user', JSON.stringify(profile));
+    currentUser = profile;
+    await sb.from('users').update({ last_seen: new Date().toISOString() }).eq('id', currentUser.id);
+
+    loginBtn.disabled = false; loginBtn.textContent = 'Sign In →';
+    showLoginScreen(false);
+    await loadAllData();
+    setInterval(async () => { if (currentUser?.id) await sb.from('users').update({ last_seen: new Date().toISOString() }).eq('id', currentUser.id); }, 60000);
+};
+
+function showLoginScreen(show) {
+    document.getElementById('loginScreen').style.display = show ? 'block' : 'none';
+    document.getElementById('adminPanel').style.display = show ? 'none' : 'block';
+}
+
+// ─── CHECK SESSION ───────────────────────────────────────────────────────────
+async function checkSession() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { showLoginScreen(true); return false; }
+    const { data: profile } = await sb.from('users').select('id, email, name, is_admin, disabled').eq('id', session.user.id).single();
+    if (!profile?.is_admin || profile.disabled) { await sb.auth.signOut(); showLoginScreen(true); return false; }
+    localStorage.setItem('aou_user', JSON.stringify(profile));
+    currentUser = profile;
+    showLoginScreen(false);
+    await loadAllData();
+    setInterval(async () => { if (currentUser?.id) await sb.from('users').update({ last_seen: new Date().toISOString() }).eq('id', currentUser.id); }, 60000);
+    return true;
+}
+
+// ─── LOGOUT ───────────────────────────────────────────────────────────────────
+window.logout = async () => {
+    await sb.auth.signOut();
+    localStorage.removeItem('aou_user');
+    currentUser = null;
+    showLoginScreen(true);
+};
+
+// ─── LOAD ALL DATA ───────────────────────────────────────────────────────────
+async function loadAllData() {
+    await loadUsers();
+    await loadFeedbacks();
+}
+
+// ─── USERS ───────────────────────────────────────────────────────────────────
+async function loadUsers() {
+    setUsersLoading(true);
+    const container = document.getElementById('userList');
+    container.innerHTML = '<div class="list-loading">Loading users...</div>';
+
+    const { data: users, error } = await sb.from('users').select('*').order('created_at', { ascending: false });
+    setUsersLoading(false);
+    if (error) { container.innerHTML = '<div class="list-loading">Error loading users</div>'; return; }
+
+    allUsers = (users || []).filter(u => u.id !== currentUser?.id);
+    selectedUserIds.clear();
+    updateUserStats();
+    filterUsers();
+}
+
+function updateUserStats() {
+    const total = allUsers.length;
+    const active = allUsers.filter(u => !u.disabled).length;
+    const disabled = total - active;
+    const online = allUsers.filter(u => isOnline(u.last_seen)).length;
+    document.getElementById('totalUsers').textContent = total;
+    document.getElementById('activeUsers').textContent = active;
+    document.getElementById('disabledUsers').textContent = disabled;
+    document.getElementById('onlineNow').textContent = online;
+}
+
+window.filterUsers = function() {
+    const term = document.getElementById('userSearchInput').value.toLowerCase();
+    const filtered = allUsers.filter(u => (u.name?.toLowerCase().includes(term)) || (u.email?.toLowerCase().includes(term)) || (u.school?.toLowerCase().includes(term)));
+    renderUserList(filtered);
+};
+
+function renderUserList(users) {
+    const container = document.getElementById('userList');
+    if (!users.length) { container.innerHTML = '<div class="list-loading">No users found</div>'; return; }
+
+    container.innerHTML = users.map(user => {
+        const isSelected = selectedUserIds.has(user.id);
+        const avatar = user.avatar_url ? `<img src="${user.avatar_url}">` : (user.initials || user.name?.charAt(0) || '?');
+        const disabledBadge = user.disabled ? '<span class="badge disabled">DISABLED</span>' : '';
+        const adminBadge = user.is_admin ? '<span class="badge admin">ADMIN</span>' : '';
+        const online = isOnline(user.last_seen);
+        const statusClass = online ? 'status-online' : 'status-offline';
+        const lastSeenText = formatLastSeen(user.last_seen);
+
+        return `
+            <div class="list-item ${isSelected ? 'selected' : ''}" onclick="toggleUser('${user.id}')">
+                <input type="checkbox" class="item-checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleUser('${user.id}')">
+                <div class="item-avatar">${avatar}</div>
+                <div class="item-info">
+                    <div class="item-name-row">
+                        <span class="status-indicator ${statusClass}"></span>
+                        <span class="item-name">${escapeHtml(user.name || 'Unknown')}</span>
+                        ${adminBadge} ${disabledBadge}
+                    </div>
+                    <div class="item-email">${escapeHtml(user.email)}</div>
+                    <div class="item-meta">${escapeHtml(user.school || '')} · ${escapeHtml(user.class || '')} · Last seen: ${lastSeenText}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    updateUserSelectAllState();
+}
+
+window.toggleUser = (id) => { selectedUserIds.has(id) ? selectedUserIds.delete(id) : selectedUserIds.add(id); filterUsers(); };
+window.toggleSelectAllUsers = () => {
+    const selectAll = document.getElementById('selectAllUsersCheckbox');
+    const term = document.getElementById('userSearchInput').value.toLowerCase();
+    const filtered = allUsers.filter(u => (u.name?.toLowerCase().includes(term)) || (u.email?.toLowerCase().includes(term)) || (u.school?.toLowerCase().includes(term)));
+    selectAll.checked ? filtered.forEach(u => selectedUserIds.add(u.id)) : filtered.forEach(u => selectedUserIds.delete(u.id));
+    renderUserList(filtered);
+};
+function updateUserSelectAllState() {
+    const term = document.getElementById('userSearchInput').value.toLowerCase();
+    const filtered = allUsers.filter(u => (u.name?.toLowerCase().includes(term)) || (u.email?.toLowerCase().includes(term)) || (u.school?.toLowerCase().includes(term)));
+    const allSelected = filtered.length > 0 && filtered.every(u => selectedUserIds.has(u.id));
+    document.getElementById('selectAllUsersCheckbox').checked = allSelected;
+    document.getElementById('selectedUsersCount').textContent = `${selectedUserIds.size} selected`;
+}
+
+// Bulk user actions (same as before)
+async function bulkDisable() {
+    if (selectedUserIds.size === 0) { showToast('No users selected', 'error'); return; }
+    if (!confirm(`Disable ${selectedUserIds.size} user(s)?`)) return;
+    setUsersLoading(true);
+    const ids = Array.from(selectedUserIds);
+    const { error } = await sb.from('users').update({ disabled: true }).in('id', ids);
+    setUsersLoading(false);
+    if (error) { showToast('Failed: ' + error.message, 'error'); return; }
+    showToast(`Disabled ${ids.length} user(s)`, 'success');
+    selectedUserIds.clear();
+    loadUsers();
+}
+async function bulkEnable() {
+    if (selectedUserIds.size === 0) { showToast('No users selected', 'error'); return; }
+    if (!confirm(`Enable ${selectedUserIds.size} user(s)?`)) return;
+    setUsersLoading(true);
+    const ids = Array.from(selectedUserIds);
+    const { error } = await sb.from('users').update({ disabled: false }).in('id', ids);
+    setUsersLoading(false);
+    if (error) { showToast('Failed: ' + error.message, 'error'); return; }
+    showToast(`Enabled ${ids.length} user(s)`, 'success');
+    selectedUserIds.clear();
+    loadUsers();
+}
+async function bulkDelete() {
+    if (selectedUserIds.size === 0) { showToast('No users selected', 'error'); return; }
+    if (!confirm(`PERMANENTLY DELETE ${selectedUserIds.size} user(s)?`)) return;
+    setUsersLoading(true);
+    const ids = Array.from(selectedUserIds);
+    for (const id of ids) { try { await sb.auth.admin.deleteUser(id); } catch (e) {} }
+    const { error } = await sb.from('users').delete().in('id', ids);
+    setUsersLoading(false);
+    if (error) { showToast('Failed: ' + error.message, 'error'); return; }
+    showToast(`Deleted ${ids.length} user(s)`, 'success');
+    selectedUserIds.clear();
+    loadUsers();
+}
+window.bulkDisable = bulkDisable;
+window.bulkEnable = bulkEnable;
+window.bulkDelete = bulkDelete;
+
+// ─── FEEDBACKS ───────────────────────────────────────────────────────────────
+async function loadFeedbacks() {
+    setFeedbacksLoading(true);
+    const container = document.getElementById('feedbackList');
+    container.innerHTML = '<div class="list-loading">Loading feedbacks...</div>';
+
+    const { data: feedbacks, error } = await sb.from('feedbacks').select('*').order('created_at', { ascending: false });
+    setFeedbacksLoading(false);
+    if (error) { container.innerHTML = '<div class="list-loading">Error loading feedbacks</div>'; return; }
+
+    allFeedbacks = feedbacks || [];
+    selectedFeedbackIds.clear();
+    updateFeedbackStats();
+    filterFeedbacks();
+}
+
+function updateFeedbackStats() {
+    const total = allFeedbacks.length;
+    const unread = allFeedbacks.filter(f => !f.is_read).length;
+    document.getElementById('totalFeedbacks').textContent = total;
+    document.getElementById('unreadFeedbacks').textContent = unread;
+}
+
+window.filterFeedbacks = function() {
+    const term = document.getElementById('feedbackSearchInput').value.toLowerCase();
+    const filtered = allFeedbacks.filter(f => 
+        (f.message?.toLowerCase().includes(term)) || 
+        (f.user_name?.toLowerCase().includes(term)) ||
+        (f.user_email?.toLowerCase().includes(term))
+    );
+    renderFeedbackList(filtered);
+};
+
+function renderFeedbackList(feedbacks) {
+    const container = document.getElementById('feedbackList');
+    if (!feedbacks.length) { container.innerHTML = '<div class="list-loading">No feedbacks found</div>'; return; }
+
+    container.innerHTML = feedbacks.map(f => {
+        const isSelected = selectedFeedbackIds.has(f.id);
+        const unreadBadge = !f.is_read ? '<span class="badge unread">UNREAD</span>' : '';
+        return `
+            <div class="list-item ${isSelected ? 'selected' : ''}" onclick="toggleFeedback(${f.id})">
+                <input type="checkbox" class="item-checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleFeedback(${f.id})">
+                <div class="item-avatar">💬</div>
+                <div class="item-info">
+                    <div class="item-name-row">
+                        <span class="item-name">${escapeHtml(f.user_name || 'Anonymous')}</span>
+                        ${unreadBadge}
+                    </div>
+                    <div class="item-email">${escapeHtml(f.user_email || 'No email')}</div>
+                    <div class="item-message">${escapeHtml(f.message)}</div>
+                    <div class="item-meta">${new Date(f.created_at).toLocaleString()}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    updateFeedbackSelectAllState();
+}
+
+window.toggleFeedback = (id) => { selectedFeedbackIds.has(id) ? selectedFeedbackIds.delete(id) : selectedFeedbackIds.add(id); filterFeedbacks(); };
+window.toggleSelectAllFeedbacks = () => {
+    const selectAll = document.getElementById('selectAllFeedbacksCheckbox');
+    const term = document.getElementById('feedbackSearchInput').value.toLowerCase();
+    const filtered = allFeedbacks.filter(f => (f.message?.toLowerCase().includes(term)) || (f.user_name?.toLowerCase().includes(term)) || (f.user_email?.toLowerCase().includes(term)));
+    selectAll.checked ? filtered.forEach(f => selectedFeedbackIds.add(f.id)) : filtered.forEach(f => selectedFeedbackIds.delete(f.id));
+    renderFeedbackList(filtered);
+};
+function updateFeedbackSelectAllState() {
+    const term = document.getElementById('feedbackSearchInput').value.toLowerCase();
+    const filtered = allFeedbacks.filter(f => (f.message?.toLowerCase().includes(term)) || (f.user_name?.toLowerCase().includes(term)) || (f.user_email?.toLowerCase().includes(term)));
+    const allSelected = filtered.length > 0 && filtered.every(f => selectedFeedbackIds.has(f.id));
+    document.getElementById('selectAllFeedbacksCheckbox').checked = allSelected;
+    document.getElementById('selectedFeedbacksCount').textContent = `${selectedFeedbackIds.size} selected`;
+}
+
+async function bulkMarkRead() {
+    if (selectedFeedbackIds.size === 0) { showToast('No feedback selected', 'error'); return; }
+    const ids = Array.from(selectedFeedbackIds);
+    await sb.from('feedbacks').update({ is_read: true }).in('id', ids);
+    showToast(`Marked ${ids.length} as read`, 'success');
+    selectedFeedbackIds.clear();
+    loadFeedbacks();
+}
+async function bulkMarkUnread() {
+    if (selectedFeedbackIds.size === 0) { showToast('No feedback selected', 'error'); return; }
+    const ids = Array.from(selectedFeedbackIds);
+    await sb.from('feedbacks').update({ is_read: false }).in('id', ids);
+    showToast(`Marked ${ids.length} as unread`, 'success');
+    selectedFeedbackIds.clear();
+    loadFeedbacks();
+}
+async function bulkDeleteFeedbacks() {
+    if (selectedFeedbackIds.size === 0) { showToast('No feedback selected', 'error'); return; }
+    if (!confirm(`Delete ${selectedFeedbackIds.size} feedback(s)?`)) return;
+    const ids = Array.from(selectedFeedbackIds);
+    await sb.from('feedbacks').delete().in('id', ids);
+    showToast(`Deleted ${ids.length} feedback(s)`, 'success');
+    selectedFeedbackIds.clear();
+    loadFeedbacks();
+}
+window.bulkMarkRead = bulkMarkRead;
+window.bulkMarkUnread = bulkMarkUnread;
+window.bulkDeleteFeedbacks = bulkDeleteFeedbacks;
+
+function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+// Start
+checkSession();
+</script>
+    <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+      .then(() => console.log('Service Worker registered'))
+      .catch((err) => console.log('SW registration failed:', err));
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Disco">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<meta name="theme-color" content="#000000">
+<title>Discovr – Everyone</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+    --bg: #000;
+    --surface: rgba(128,0,255,0.08);
+    --surface2: rgba(128,0,255,0.12);
+    --border: rgba(128,0,255,0.22);
+    --primary: #8c36ff;
+    --text: white;
+    --text-secondary: #c7b2ff;
+    --nav-bg: rgba(0,0,0,0.95);
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 70px;
+}
+body.theme-disco {
+    --bg: #000;
+    --surface: rgba(128,0,255,0.08);
+    --surface2: rgba(128,0,255,0.12);
+    --border: rgba(128,0,255,0.22);
+    --primary: #8c36ff;
+    --text: white;
+    --text-secondary: #c7b2ff;
+    --nav-bg: rgba(0,0,0,0.95);
+    backdrop-filter: none;
+}
+.container { max-width:500px; margin:0 auto; padding:16px; position:relative; z-index:10; }
+.header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid var(--border); }
+.header h1 { font-family: 'Space Grotesk', sans-serif; font-size:28px; font-weight:700; color:var(--text); }
+.logout-btn { padding:8px 14px; background:transparent; border:1px solid #FF4444; border-radius:20px; color:#FF4444; cursor:pointer; }
+.search-box { margin-bottom:16px; }
+.search-box input { width:100%; padding:14px 16px; background:var(--surface2); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:15px; outline:none; }
+.filter-row { display:flex; gap:8px; margin-bottom:20px; overflow-x:auto; }
+.filter-btn { padding:8px 16px; background:var(--surface2); border:1px solid var(--border); border-radius:20px; color:var(--text-secondary); cursor:pointer; font-size:13px; white-space:nowrap; }
+.filter-btn.active { background:var(--primary); color:white; border-color:var(--primary); }
+.user-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:16px; margin-bottom:10px; display:flex; align-items:center; gap:14px; cursor:pointer; }
+.user-avatar { width:52px; height:52px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; font-weight:600; font-size:18px; overflow:hidden; }
+.user-info { flex:1; }
+.user-name { font-weight:600; margin-bottom:4px; color:var(--text); }
+.user-details { font-size:13px; color:var(--text-secondary); }
+.message-btn { padding:10px 18px; background:var(--primary); border:none; border-radius:24px; color:white; cursor:pointer; flex-shrink:0; }
+.bottom-nav { position:fixed; bottom:0; left:0; right:0; max-width:500px; margin:0 auto; background:var(--nav-bg); border-top:1px solid var(--border); display:flex; justify-content:space-around; padding:12px; z-index:30; backdrop-filter:blur(10px); }
+.nav-item { display:flex; flex-direction:column; align-items:center; color:var(--text-secondary); text-decoration:none; font-size:12px; position:relative; }
+.nav-item.active { color:var(--primary); }
+.nav-icon { font-size:22px; line-height:1; margin-bottom:2px; }
+.nav-icon i { display:block; }
+.nav-item.active .nav-icon i { color:var(--primary); text-shadow:0 0 4px var(--primary); }
+.nav-badge { position:absolute; top:-4px; right:20px; min-width:18px; height:18px; background:#25D366; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:white; padding:0 4px; border:2px solid var(--bg); }
+.empty-state { text-align:center; padding:60px 20px; color:var(--text-secondary); }
+.bg { position:fixed; inset:0; z-index:0; background:#000; overflow:hidden; display:block; }
+.leak { position:absolute; width:100%; height:350px; top:0; left:0; background:linear-gradient(180deg, rgba(128,0,255,0.12) 0%, transparent 100%); }
+.bottom-glow { position:fixed; bottom:0; left:0; right:0; height:200px; background:linear-gradient(0deg, rgba(128,0,255,0.08) 0%, transparent 100%); z-index:1; pointer-events:none; display:block; }
+</style>
+</head>
+<body>
+<div class="bg"><div class="leak"></div></div>
+<div class="bottom-glow"></div>
+<div class="container">
+    <div class="header"><h1>Discovr</h1><button class="logout-btn" onclick="logout()">Logout</button></div>
+    <div class="search-box"><input type="text" id="searchInput" placeholder="Search user or school name" oninput="filterUsers()"></div>
+    <div class="filter-row">
+        <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">All</button>
+        <button class="filter-btn" data-filter="school" onclick="setFilter('school')">My School</button>
+        <button class="filter-btn" data-filter="class" onclick="setFilter('class')">My Class</button>
+        <button class="filter-btn" data-filter="dept" onclick="setFilter('dept')">My Department</button>
+    </div>
+    <div id="usersList"><div class="empty-state">Loading users...</div></div>
+</div>
+<div class="bottom-nav">
+    <a href="everyone.html" class="nav-item active"><div class="nav-icon"><i class="fas fa-users"></i></div><span>Everyone</span></a>
+    <a href="posts.html" class="nav-item"><div class="nav-icon"><i class="fas fa-plus-circle"></i></div><span>Posts</span></a>
+    <a href="chat.html" class="nav-item" id="chatNavItem"><div class="nav-icon"><i class="fas fa-comment-dots"></i></div><span>Chats</span><span class="nav-badge" id="chatNavBadge" style="display:none;">0</span></a>
+    <a href="profile.html" class="nav-item"><div class="nav-icon"><i class="fas fa-user-circle"></i></div><span>Profile</span></a>
+</div>
+<script>
+const sb = window.supabase.createClient('https://oyeojlvrjhaymbhohxdq.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im95ZW9qbHZyamhheW1iaG9oeGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNzMxNDYsImV4cCI6MjA5MDk0OTE0Nn0.aL-Y0hXjfpSIfqnwX-CDhoYLu5fsaMZPr6wW_VxxYj8');
+let currentUser=null, allUsers=[], currentFilter='all', unreadSubscription=null;
+const savedTheme=localStorage.getItem('disco_theme')||'default';
+if(savedTheme==='disco') document.body.classList.add('theme-disco');
+async function init(){
+    const stored=localStorage.getItem('aou_user'); if(stored) currentUser=JSON.parse(stored);
+    const {data:{session}}=await sb.auth.getSession(); if(!session){window.location.href='index.html';return;}
+    if(!currentUser){ const {data:user}=await sb.from('users').select('*').eq('id',session.user.id).single(); if(user){currentUser=user; localStorage.setItem('aou_user',JSON.stringify(user));} }
+    await loadUsers(); await updateUnreadBadge(); subscribeToUnread();
+}
+async function loadUsers(){
+    const {data:users}=await sb.from('users').select('*').order('created_at',{ascending:false});
+    allUsers=(users||[]).filter(u=>u.id!==currentUser?.id && !u.is_admin);
+    filterUsers();
+}
+window.setFilter=function(f){ currentFilter=f; document.querySelectorAll('.filter-btn').forEach(b=>b.classList.toggle('active',b.dataset.filter===f)); filterUsers(); };
+window.filterUsers=function(){
+    const term=document.getElementById('searchInput').value.toLowerCase().trim();
+    let filtered=[...allUsers];
+    if(term) filtered=filtered.filter(u=>(u.name?.toLowerCase().includes(term))||(u.school?.toLowerCase().includes(term)));
+    if(currentUser){
+        if(currentFilter==='school') filtered=filtered.filter(u=>u.school===currentUser.school);
+        else if(currentFilter==='class') filtered=filtered.filter(u=>u.class===currentUser.class);
+        else if(currentFilter==='dept') filtered=filtered.filter(u=>u.department===currentUser.department);
+    }
+    const container=document.getElementById('usersList');
+    if(!filtered.length){ container.innerHTML='<div class="empty-state"><div style="font-size:48px;">👥</div><div>No users found</div></div>'; return; }
+    container.innerHTML=filtered.map(user=>{
+        const avatar=user.avatar_url?`<img src="${user.avatar_url}" style="width:100%;height:100%;object-fit:cover;">`:(user.initials||'?');
+        return `<div class="user-card" onclick="startChat('${user.id}')"><div class="user-avatar">${avatar}</div><div class="user-info"><div class="user-name">${escapeHtml(user.name)}</div><div class="user-details">${escapeHtml(user.school)} · Class ${escapeHtml(user.class)} · ${escapeHtml(user.department)}</div></div><button class="message-btn" onclick="event.stopPropagation(); startChat('${user.id}')">Message</button></div>`;
+    }).join('');
+};
+window.startChat=(userId)=>{ localStorage.setItem('chat_with',userId); window.location.href='chat.html'; };
+async function updateUnreadBadge(){
+    if(!currentUser) return;
+    const lr=localStorage.getItem('aou_last_read')||'{}'; const lastReadAt=JSON.parse(lr);
+    const {data:msgs}=await sb.from('messages').select('*').eq('receiver_id',currentUser.id);
+    let total=0; (msgs||[]).forEach(m=>{ if(m.created_at>(lastReadAt[m.sender_id]||'1970-01-01')) total++; });
+    const badge=document.getElementById('chatNavBadge');
+    if(total>0){ badge.textContent=total>99?'99+':total; badge.style.display='flex'; } else badge.style.display='none';
+}
+function subscribeToUnread(){
+    if(unreadSubscription) sb.removeChannel(unreadSubscription);
+    unreadSubscription=sb.channel('unread-everyone').on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`receiver_id=eq.${currentUser.id}`},()=>updateUnreadBadge()).subscribe();
+}
+window.logout=async function(){ await sb.auth.signOut(); localStorage.removeItem('aou_user'); window.location.href='index.html'; };
+function escapeHtml(t){ const d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
+init();
+</script>
+<script src="heartbeat.js"></script>
+<script>
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').then(() => console.log('Service Worker registered')).catch((err) => console.log('SW registration failed:', err)); }
+</script>
+</body>
+</html>

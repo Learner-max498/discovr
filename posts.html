@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Disco">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<meta name="theme-color" content="#000000">
+<title>Discovr – Posts</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body {
+    --bg: #000;
+    --surface: rgba(128,0,255,0.08);
+    --surface2: rgba(128,0,255,0.12);
+    --border: rgba(128,0,255,0.22);
+    --primary: #8c36ff;
+    --text: white;
+    --text-secondary: #c7b2ff;
+    --nav-bg: rgba(0,0,0,0.95);
+    font-family: 'DM Sans', sans-serif;
+    background: #000;
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 70px;
+}
+body.theme-disco {
+    --bg: #000;
+    --surface: rgba(128,0,255,0.08);
+    --surface2: rgba(128,0,255,0.12);
+    --border: rgba(128,0,255,0.22);
+    --primary: #8c36ff;
+    --text: white;
+    --text-secondary: #c7b2ff;
+    --nav-bg: rgba(0,0,0,0.95);
+    backdrop-filter: none;
+}
+.container { max-width:500px; margin:0 auto; padding:16px; position:relative; z-index:10; }
+.header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid var(--border); }
+.header h1 { font-family: 'Space Grotesk', sans-serif; font-size:28px; font-weight:700; color:var(--text); }
+.search-box { margin-bottom:16px; }
+.search-box input { width:100%; padding:14px 16px; background:var(--surface2); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:15px; outline:none; }
+.filter-row { display:flex; gap:8px; margin-bottom:20px; overflow-x:auto; }
+.filter-btn { padding:8px 16px; background:var(--surface2); border:1px solid var(--border); border-radius:20px; color:var(--text-secondary); cursor:pointer; font-size:13px; white-space:nowrap; }
+.filter-btn.active { background:var(--primary); color:white; border-color:var(--primary); }
+.post-card { display:flex; gap:12px; padding:16px 0; border-bottom:1px solid var(--border); }
+.post-avatar { width:44px; height:44px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; font-weight:600; font-size:16px; overflow:hidden; flex-shrink:0; }
+.post-avatar img { width:100%; height:100%; object-fit:cover; }
+.post-body { flex:1; min-width:0; }
+.post-header { display:flex; align-items:center; gap:6px; margin-bottom:4px; flex-wrap:wrap; }
+.post-author-name { font-weight:600; font-size:15px; color:var(--text); }
+.post-author-meta { font-size:13px; color:var(--text-secondary); }
+.post-time { font-size:13px; color:var(--text-secondary); }
+.post-content { font-size:14px; line-height:1.5; word-wrap:break-word; margin-bottom:8px; color:var(--text); }
+.media-preview { margin:8px 0; border-radius:16px; overflow:hidden; border:1px solid var(--border); cursor:pointer; position:relative; }
+.media-preview img, .media-preview video { width:100%; max-height:300px; object-fit:cover; display:block; }
+.video-play-overlay { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:40px; height:40px; background:rgba(0,0,0,0.5); backdrop-filter:blur(2px); border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; font-size:18px; pointer-events:none; }
+.timetable-preview { margin-top:8px; background:var(--surface2); border-radius:12px; padding:12px; overflow-x:auto; }
+.timetable-preview-grid { min-width:300px; display:table; width:100%; }
+.timetable-preview-row { display:table-row; }
+.timetable-preview-cell { display:table-cell; padding:6px 8px; border-bottom:1px solid var(--border); font-size:13px; }
+.timetable-preview-header { font-weight:600; color:var(--primary); border-bottom:1px solid var(--primary); }
+.post-footer { display:flex; align-items:center; gap:24px; margin-top:8px; }
+.comment-btn { display:flex; align-items:center; gap:6px; cursor:pointer; color:var(--text-secondary); font-size:13px; transition:color 0.2s; }
+.comment-btn:hover { color:var(--primary); }
+.post-expires { color:#FFAA00; font-size:13px; }
+.fab { position:fixed; bottom:80px; right:20px; width:56px; height:56px; background:var(--primary); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:28px; color:white; cursor:pointer; box-shadow:0 8px 25px rgba(122,34,255,0.55); z-index:20; }
+.modal { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:var(--bg); z-index:1000; flex-direction:column; }
+.modal.show { display:flex; }
+.modal-header { padding:16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:16px; background:var(--bg); flex-shrink:0; }
+.modal-header h2 { font-size:20px; font-weight:600; color:var(--text); }
+.back-btn { background:none; border:none; color:var(--primary); font-size:20px; cursor:pointer; }
+.create-post-container { padding:20px; flex:1; overflow-y:auto; }
+.post-type-selector { display:flex; gap:12px; margin-bottom:20px; background:var(--surface2); padding:4px; border-radius:12px; }
+.type-option { flex:1; text-align:center; padding:10px; border-radius:8px; cursor:pointer; color:var(--text-secondary); font-weight:500; }
+.type-option.active { background:var(--primary); color:white; }
+.visibility-selector { margin-bottom:20px; }
+.visibility-selector select { width:100%; padding:14px; background:var(--surface2); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:15px; outline:none; }
+.content-textarea { width:100%; min-height:150px; padding:16px; background:var(--surface2); border:1px solid var(--border); border-radius:16px; color:var(--text); font-size:16px; line-height:1.5; resize:vertical; outline:none; margin-bottom:16px; }
+.content-textarea:focus { border-color:var(--primary); }
+.content-textarea::placeholder { color:var(--text-secondary); }
+.image-attachment-area { margin-bottom:20px; }
+.attach-media-btn { display:inline-flex; align-items:center; gap:8px; padding:12px 16px; background:var(--surface2); border:1px dashed var(--primary); border-radius:12px; color:var(--primary); font-size:14px; cursor:pointer; }
+.media-preview-container { margin-top:12px; position:relative; border-radius:12px; overflow:hidden; }
+.media-preview-container img, .media-preview-container video { width:100%; max-height:200px; object-fit:cover; border-radius:12px; }
+.remove-media-btn { position:absolute; top:8px; right:8px; width:32px; height:32px; background:rgba(0,0,0,0.7); border:none; border-radius:50%; color:white; font-size:16px; cursor:pointer; }
+.post-action-buttons { display:flex; gap:12px; padding:16px 20px; border-top:1px solid var(--border); background:var(--bg); }
+.btn-cancel { flex:1; padding:16px; border-radius:12px; background:var(--surface2); border:1px solid var(--border); color:var(--text-secondary); font-weight:600; cursor:pointer; }
+.btn-post { flex:1; padding:16px; border-radius:12px; background:var(--primary); color:white; border:none; font-weight:600; cursor:pointer; }
+.btn-post:disabled { opacity:0.6; cursor:not-allowed; }
+.class-selector { margin-bottom:20px; }
+.class-selector select { width:100%; padding:14px; background:var(--surface2); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:15px; }
+.timetable-editor { margin-top:8px; }
+.timetable-day-block { background:var(--surface); border-radius:16px; padding:16px; margin-bottom:16px; border:1px solid var(--border); }
+.timetable-day-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.timetable-day-header select { padding:10px 14px; background:var(--bg); border:1px solid var(--border); border-radius:10px; color:var(--text); font-size:15px; font-weight:600; min-width:130px; }
+.delete-day-btn { background:none; border:none; color:#FF4444; font-size:18px; cursor:pointer; }
+.timetable-subject-row { display:grid; grid-template-columns:1fr 90px 36px; gap:8px; margin-bottom:10px; align-items:center; }
+.timetable-subject-row input { padding:12px 10px; background:var(--bg); border:1px solid var(--border); border-radius:10px; color:var(--text); font-size:14px; outline:none; width:100%; }
+.timetable-subject-row input:focus { border-color:var(--primary); }
+.add-subject-btn { width:100%; padding:12px; margin-top:8px; background:transparent; border:1px dashed var(--primary); border-radius:10px; color:var(--primary); font-size:14px; font-weight:500; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; }
+.add-subject-btn::before { content:"+"; font-size:18px; }
+.remove-subject-btn { background:none; border:none; color:#FF4444; font-size:18px; cursor:pointer; }
+.add-day-btn { width:100%; padding:14px; background:transparent; border:1px dashed var(--primary); border-radius:12px; color:var(--primary); font-weight:600; cursor:pointer; }
+.add-day-btn::before { content:"+"; font-size:20px; margin-right:8px; }
+.comments-container { flex:1; overflow-y:auto; padding:16px; }
+.comment-item { padding:14px 0; border-bottom:1px solid var(--border); overflow:hidden; width:100%; }
+.comment-header { display:flex; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:nowrap; overflow:hidden; }
+.comment-avatar { width:32px; height:32px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; overflow:hidden; flex-shrink:0; }
+.comment-avatar img { width:100%; height:100%; object-fit:cover; }
+.comment-author { font-weight:600; font-size:14px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:120px; }
+.reply-to-arrow { font-size:11px; color:var(--text-secondary); flex-shrink:0; margin:0 1px; }
+.reply-to-name { font-size:13px; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100px; }
+.comment-time { font-size:11px; color:var(--text-secondary); margin-left:auto; white-space:nowrap; flex-shrink:0; }
+.comment-content { font-size:14px; padding-left:38px; margin-bottom:6px; color:var(--text); line-height:1.45; word-break:break-word; }
+.comment-image { margin:6px 0 6px 38px; max-width:200px; border-radius:8px; display:block; }
+.reply-btn { margin-left:38px; font-size:12px; color:var(--primary); cursor:pointer; display:inline-block; margin-top:4px; }
+.replies-container { margin-left:38px; margin-top:4px; border-left:2px solid var(--border); padding-left:10px; overflow:hidden; width:calc(100% - 38px); max-width:calc(100% - 38px); }
+.replies-container .comment-item { border-bottom:none; border-top:1px solid rgba(128,0,255,0.08); padding:10px 0; margin:0; width:100%; overflow:hidden; }
+.replies-container .comment-item:first-child { border-top:none; }
+.replies-container .replies-container { margin-left:0 !important; padding-left:0 !important; border-left:none !important; width:100% !important; max-width:100% !important; }
+.view-replies-btn, .hide-replies-btn { margin-left:38px; margin-top:6px; font-size:12px; color:var(--primary); cursor:pointer; display:inline-flex; align-items:center; gap:4px; }
+.comment-input-container { padding:12px 16px; border-top:1px solid var(--border); background:var(--bg); display:flex; gap:8px; align-items:center; flex-shrink:0; }
+.comment-input-container input { flex:1; padding:12px 14px; background:var(--surface2); border:1px solid var(--border); border-radius:24px; color:var(--text); font-size:14px; outline:none; }
+.comment-input-container button { padding:12px 16px; background:var(--primary); border:none; border-radius:24px; color:white; font-weight:600; cursor:pointer; font-size:14px; white-space:nowrap; }
+.attach-btn { background:none; border:none; font-size:22px; cursor:pointer; color:var(--primary); padding:8px; display:flex; align-items:center; justify-content:center; }
+.reply-indicator { padding:6px 12px; background:var(--surface2); border-left:3px solid var(--primary); border-radius:4px; font-size:12px; color:var(--text-secondary); margin:8px 16px 0; display:none; align-items:center; justify-content:space-between; }
+.reply-indicator.show { display:flex; }
+.empty-state { text-align:center; padding:60px 20px; color:var(--text-secondary); }
+.bottom-nav { position:fixed; bottom:0; left:0; right:0; max-width:500px; margin:0 auto; background:var(--nav-bg); border-top:1px solid var(--border); display:flex; justify-content:space-around; padding:12px; z-index:30; backdrop-filter:blur(10px); }
+.nav-item { display:flex; flex-direction:column; align-items:center; color:var(--text-secondary); text-decoration:none; font-size:12px; position:relative; }
+.nav-item.active { color:var(--primary); }
+.nav-icon { font-size:22px; line-height:1; margin-bottom:2px; }
+.nav-icon i { display:block; }
+.nav-item.active .nav-icon i { color:var(--primary); text-shadow:0 0 4px var(--primary); }
+.nav-badge { position:absolute; top:-4px; right:20px; min-width:18px; height:18px; background:#25D366; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:white; padding:0 4px; border:2px solid var(--bg); }
+.toast { position:fixed; bottom:30px; left:50%; transform:translateX(-50%); padding:12px 24px; background:var(--surface); border-radius:30px; font-size:14px; z-index:2000; border:1px solid var(--border); }
+.toast.success { background:#00CC00; color:white; }
+.toast.error { background:#FF4444; color:white; }
+.bg { display:none; }
+.bottom-glow { display:none; }
+.media-viewer-modal { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:black; z-index:2000; flex-direction:column; }
+.media-viewer-modal.show { display:flex; }
+.media-viewer-header { padding:16px; display:flex; align-items:center; gap:16px; background:rgba(0,0,0,0.8); flex-shrink:0; }
+.media-viewer-content { flex:1; display:flex; align-items:center; justify-content:center; padding:20px; }
+.media-viewer-content img, .media-viewer-content video { max-width:100%; max-height:calc(100vh - 120px); object-fit:contain; border-radius:8px; }
+.download-btn { margin-left:auto; padding:8px 16px; background:var(--primary); color:white; border:none; border-radius:8px; font-weight:600; cursor:pointer; }
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="bottom-glow"></div>
+<div class="container">
+    <div class="header"><h1>Discovr</h1></div>
+    <div class="search-box"><input type="text" id="searchInput" placeholder="Search posts by name, school" oninput="filterPosts()"></div>
+    <div class="filter-row">
+        <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">All</button>
+        <button class="filter-btn" data-filter="new" onclick="setFilter('new')">New</button>
+        <button class="filter-btn" data-filter="old" onclick="setFilter('old')">Old</button>
+        <button class="filter-btn" data-filter="hour" onclick="setFilter('hour')">Last 1 HR</button>
+    </div>
+    <div id="postsList"><div class="empty-state">Loading posts...</div></div>
+</div>
+<div class="fab" onclick="openCreateModal()">+</div>
+<div class="media-viewer-modal" id="mediaViewerModal">
+    <div class="media-viewer-header"><button class="back-btn" onclick="closeMediaViewer()">← Back</button><button class="download-btn" id="downloadMediaBtn" onclick="downloadMedia()">Download</button></div>
+    <div class="media-viewer-content" id="mediaViewerContent"></div>
+</div>
+<div class="modal" id="createModal">
+    <div class="modal-header"><button class="back-btn" onclick="closeCreateModal()">←</button><h2>Create Post</h2></div>
+    <div class="create-post-container">
+        <div class="post-type-selector"><div class="type-option active" data-type="normal" onclick="selectPostType('normal')">📝 Normal</div><div class="type-option" data-type="timetable" onclick="selectPostType('timetable')">📅 Timetable</div></div>
+        <div class="visibility-selector"><select id="postVisibility"><option value="public">🌍 Everyone</option><option value="school">🏫 My School Only</option></select></div>
+        <div id="classSelectionGroup" style="display:none;" class="class-selector"><select id="timetableClassSelect"><option value="">-- Select Class --</option></select></div>
+        <div id="normalPostSection"><textarea id="postContent" class="content-textarea" placeholder="What's on your mind? (optional)"></textarea><div class="image-attachment-area"><div class="attach-media-btn" onclick="document.getElementById('postMediaInput').click()">📷 Add Image/Video</div><input type="file" id="postMediaInput" accept="image/*,video/*" style="display:none;" onchange="previewMedia(event)"><div class="media-preview-container" id="mediaPreview" style="display:none;"><img id="previewImg" src="" alt="" style="display:none;"><video id="previewVideo" controls style="display:none;"></video><button class="remove-media-btn" onclick="removeMedia()">✕</button></div></div></div>
+        <div id="timetableSection" style="display:none;"><div class="timetable-editor" id="timetableEditor"></div><button class="add-day-btn" onclick="addTimetableDay()">Add Day</button></div>
+    </div>
+    <div class="post-action-buttons"><button class="btn-cancel" onclick="closeCreateModal()">Cancel</button><button class="btn-post" onclick="createPost()">Post</button></div>
+</div>
+<div class="modal" id="commentsModal">
+    <div class="modal-header"><button class="back-btn" onclick="closeCommentsModal()">←</button><h2>Comments</h2></div>
+    <div class="comments-container" id="commentsList"></div>
+    <div class="reply-indicator" id="replyIndicator"><span id="replyIndicatorText">Replying...</span><button onclick="clearReply()">✕</button></div>
+    <div class="comment-input-container"><input type="text" id="commentInput" placeholder="Write a comment..."><input type="file" id="commentImageInput" accept="image/*" style="display:none;"><button class="attach-btn" onclick="document.getElementById('commentImageInput').click()">📷</button><button onclick="submitComment()">Send</button></div>
+</div>
+<div class="bottom-nav">
+    <a href="everyone.html" class="nav-item"><div class="nav-icon"><i class="fas fa-users"></i></div><span>Everyone</span></a>
+    <a href="posts.html" class="nav-item active"><div class="nav-icon"><i class="fas fa-plus-circle"></i></div><span>Posts</span></a>
+    <a href="chat.html" class="nav-item" id="chatNavItem"><div class="nav-icon"><i class="fas fa-comment-dots"></i></div><span>Chats</span><span class="nav-badge" id="chatNavBadge" style="display:none;">0</span></a>
+    <a href="profile.html" class="nav-item"><div class="nav-icon"><i class="fas fa-user-circle"></i></div><span>Profile</span></a>
+</div>
+<script>
+const sb = window.supabase.createClient('https://oyeojlvrjhaymbhohxdq.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im95ZW9qbHZyamhheW1iaG9oeGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNzMxNDYsImV4cCI6MjA5MDk0OTE0Nn0.aL-Y0hXjfpSIfqnwX-CDhoYLu5fsaMZPr6wW_VxxYj8');
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
+let currentUser=null, allPosts=[], currentFilter='all', postMediaFile=null, mediaType='image';
+let activePostId=null, replyToCommentId=null, replyToCommentAuthor=null, unreadSubscription=null;
+const replyVisibility=new Map(); let commentRoots=[];
+const commentAuthorMap=new Map();
+let timetableData=[ {day:'Monday',subjects:[{subject:'',time:''}]}, {day:'Tuesday',subjects:[{subject:'',time:''}]}, {day:'Wednesday',subjects:[{subject:'',time:''}]}, {day:'Thursday',subjects:[{subject:'',time:''}]}, {day:'Friday',subjects:[{subject:'',time:''}]} ];
+const CLASS_OPTIONS=['JSS1','JSS2','JSS3','SS1','SS2','SS3'];
+let currentMediaUrl='', currentMediaType='';
+const savedTheme=localStorage.getItem('disco_theme')||'default';
+if(savedTheme==='disco') document.body.classList.add('theme-disco');
+function showToast(msg,type){ const t=document.createElement('div'); t.className=`toast ${type}`; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3000); }
+async function init(){
+    const stored=localStorage.getItem('aou_user'); if(stored) currentUser=JSON.parse(stored);
+    const {data:{session}}=await sb.auth.getSession(); if(!session){window.location.href='index.html';return;}
+    if(!currentUser){ const {data:user}=await sb.from('users').select('*').eq('id',session.user.id).single(); if(user){currentUser=user; localStorage.setItem('aou_user',JSON.stringify(user));} }
+    await loadPosts(); await updateUnreadBadge(); subscribeToUnread(); populateClassSelect();
+}
+function populateClassSelect(){ const s=document.getElementById('timetableClassSelect'); s.innerHTML='<option value="">-- Select Class --</option>'+CLASS_OPTIONS.map(c=>`<option value="${c}">${c}</option>`).join(''); }
+async function loadPosts(){
+    document.getElementById('postsList').innerHTML = '<div class="empty-state">Loading posts...</div>';
+    const {data:userData}=await sb.from('users').select('school_id').eq('id',currentUser.id).single(); const userSchoolId=userData?.school_id;
+    const {data:posts,error}=await sb.from('posts').select('*').order('created_at',{ascending:false}); if(error){allPosts=[];filterPosts();return;}
+    if(!posts?.length){allPosts=[];filterPosts();return;}
+    const visiblePosts=posts.filter(p=>p.visibility==='public'||(p.visibility==='school'&&p.school_id===userSchoolId));
+    const userIds=[...new Set(visiblePosts.map(p=>p.user_id))];
+    const {data:users}=await sb.from('users').select('id,name,school,class,avatar_url,initials').in('id',userIds);
+    const userMap=(users||[]).reduce((acc,u)=>{acc[u.id]=u;return acc;},{});
+    const timetablePostIds=visiblePosts.filter(p=>p.type==='timetable').map(p=>p.id); let timetablesMap={};
+    if(timetablePostIds.length){ const {data:timetables}=await sb.from('timetables').select('*').in('post_id',timetablePostIds); timetablesMap=(timetables||[]).reduce((acc,t)=>{if(!acc[t.post_id])acc[t.post_id]=[];acc[t.post_id].push(t);return acc;},{}); }
+    const postIds=visiblePosts.map(p=>p.id); const {data:commentRows}=await sb.from('comments').select('post_id').in('post_id',postIds); const countMap={}; (commentRows||[]).forEach(r=>{countMap[r.post_id]=(countMap[r.post_id]||0)+1;});
+    allPosts=visiblePosts.map(p=>({...p,users:userMap[p.user_id]||{name:'Unknown',school:'',class:'',avatar_url:null,initials:'?'},timetableEntries:timetablesMap[p.id]||[],live_comment_count:countMap[p.id]||0, media_url: p.media_url || p.image_url, media_type: p.media_type || 'image'}));
+    filterPosts();
+}
+window.setFilter=function(f){ currentFilter=f; document.querySelectorAll('.filter-btn').forEach(b=>b.classList.toggle('active',b.dataset.filter===f)); filterPosts(); };
+window.filterPosts=function(){
+    const term=document.getElementById('searchInput').value.toLowerCase(); let filtered=[...allPosts]; const now=new Date();
+    if(term) filtered=filtered.filter(p=>(p.users?.name?.toLowerCase().includes(term))||(p.users?.school?.toLowerCase().includes(term)));
+    if(currentFilter==='new') filtered=filtered.filter(p=>(now-new Date(p.created_at))<10*60*1000);
+    else if(currentFilter==='hour') filtered=filtered.filter(p=>(now-new Date(p.created_at))<60*60*1000);
+    else if(currentFilter==='old') filtered=filtered.filter(p=>(now-new Date(p.created_at))>60*60*1000);
+    renderPosts(filtered);
+};
+function getTimeAgo(d){ const diff=Date.now()-new Date(d).getTime(); const m=Math.floor(diff/60000); if(m<1)return'just now'; if(m<60)return`${m}m ago`; const h=Math.floor(m/60); if(h<24)return`${h}h ago`; return`${Math.floor(h/24)}d ago`; }
+function getTimeRemaining(exp){ if(!exp)return''; const diff=new Date(exp)-new Date(); if(diff<=0)return'Expired'; const h=Math.floor(diff/3600000); return h>0?`${h}h`:`${Math.floor(diff/60000)}m`; }
+function renderPosts(posts){
+    const c=document.getElementById('postsList'); if(!posts.length){c.innerHTML='<div class="empty-state"><div style="font-size:48px;">📱</div><div>No posts yet</div></div>';return;}
+    c.innerHTML=posts.map(p=>{
+        const u=p.users||{}; const avatar=u.avatar_url?`<img src="${u.avatar_url}">`:(u.initials||'?'); let contentHtml='';
+        if(p.type==='timetable'&&p.timetableEntries?.length){
+            const byDay={}; p.timetableEntries.forEach(t=>{if(!byDay[t.day])byDay[t.day]=[];byDay[t.day].push(t);});
+            const days=['Monday','Tuesday','Wednesday','Thursday','Friday']; contentHtml=`<div class="timetable-preview"><div class="timetable-preview-grid">`;
+            contentHtml+=`<div class="timetable-preview-row">${days.map(d=>`<div class="timetable-preview-cell timetable-preview-header">${d}</div>`).join('')}</div>`;
+            const maxRows=Math.max(...days.map(d=>(byDay[d]||[]).length),1);
+            for(let i=0;i<maxRows;i++){ contentHtml+=`<div class="timetable-preview-row">`; days.forEach(d=>{ const entry=(byDay[d]||[])[i]; contentHtml+=`<div class="timetable-preview-cell">${entry?`${escapeHtml(entry.subject)}${entry.time?'<br><small>'+escapeHtml(entry.time)+'</small>':''}`:'-'}</div>`; }); contentHtml+=`</div>`; }
+            contentHtml+=`</div></div>`;
+        } else {
+            contentHtml=`<div class="post-content">${escapeHtml(p.content||'')}</div>`;
+            if(p.media_url){
+                if(p.media_type==='video') contentHtml+=`<div class="media-preview" onclick="openMediaViewer('${p.media_url}','video')"><video src="${p.media_url}" muted preload="metadata"></video><div class="video-play-overlay">▶</div></div>`;
+                else contentHtml+=`<div class="media-preview" onclick="openMediaViewer('${p.media_url}','image')"><img src="${p.media_url}"></div>`;
+            }
+        }
+        return `<div class="post-card"><div class="post-avatar">${avatar}</div><div class="post-body"><div class="post-header"><span class="post-author-name">${escapeHtml(u.name)}</span><span class="post-author-meta">· ${escapeHtml(u.school||'')} · ${escapeHtml(u.class||'')}</span><span class="post-time">· ${getTimeAgo(p.created_at)} ${p.visibility==='school'?'🏫':'🌍'} ${p.type==='timetable'?'📅':''}</span></div>${contentHtml}<div class="post-footer"><span class="comment-btn" id="ccount-${p.id}" onclick="openComments('${p.id}')">💬 ${p.live_comment_count||0}</span><span class="post-expires">⏰ ${getTimeRemaining(p.expires_at)||'24h'}</span></div></div></div>`;
+    }).join('');
+}
+window.selectPostType=(type)=>{ document.querySelectorAll('.type-option').forEach(o=>o.classList.toggle('active',o.dataset.type===type)); document.getElementById('postType').value=type; toggleTimetableEditor(); };
+window.toggleTimetableEditor=()=>{ const type=document.getElementById('postType').value; document.getElementById('normalPostSection').style.display=type==='timetable'?'none':'block'; document.getElementById('timetableSection').style.display=type==='timetable'?'block':'none'; document.getElementById('classSelectionGroup').style.display=type==='timetable'?'block':'none'; if(type==='timetable')renderTimetableEditor(); };
+function renderTimetableEditor(){
+    const container=document.getElementById('timetableEditor'); if(!timetableData.length){container.innerHTML='<p style="color:#888;text-align:center;padding:20px;">No days added. Click "Add Day" to start.</p>';return;}
+    container.innerHTML=timetableData.map((dd,di)=>`
+        <div class="timetable-day-block"><div class="timetable-day-header"><select onchange="updateTimetableDay(${di},'day',this.value)">${['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map(d=>`<option ${dd.day===d?'selected':''}>${d}</option>`).join('')}</select><button class="delete-day-btn" onclick="deleteTimetableDay(${di})">🗑️</button></div>
+        ${dd.subjects.map((s,si)=>`<div class="timetable-subject-row"><input type="text" placeholder="Subject" value="${escapeHtml(s.subject)}" onchange="updateTimetableSubject(${di},${si},'subject',this.value)"><input type="text" placeholder="Time" value="${escapeHtml(s.time)}" onchange="updateTimetableSubject(${di},${si},'time',this.value)"><button class="remove-subject-btn" onclick="removeTimetableSubject(${di},${si})" ${dd.subjects.length===1?'disabled':''}>✕</button></div>`).join('')}
+        <button class="add-subject-btn" onclick="addTimetableSubject(${di})">Add Subject</button></div>
+    `).join('');
+}
+window.updateTimetableDay=(i,f,v)=>{timetableData[i][f]=v;};
+window.updateTimetableSubject=(di,si,f,v)=>{timetableData[di].subjects[si][f]=v;};
+window.addTimetableSubject=(di)=>{timetableData[di].subjects.push({subject:'',time:''}); renderTimetableEditor();};
+window.removeTimetableSubject=(di,si)=>{timetableData[di].subjects.splice(si,1); renderTimetableEditor();};
+window.deleteTimetableDay=(di)=>{timetableData.splice(di,1); renderTimetableEditor();};
+window.addTimetableDay=()=>{timetableData.push({day:'Monday',subjects:[{subject:'',time:''}]}); renderTimetableEditor();};
+window.openCreateModal=()=>{
+    document.querySelectorAll('.type-option').forEach(o=>o.classList.toggle('active',o.dataset.type==='normal')); document.getElementById('postVisibility').value='public';
+    document.getElementById('postContent').value=''; removeMedia();
+    timetableData=[{day:'Monday',subjects:[{subject:'',time:''}]},{day:'Tuesday',subjects:[{subject:'',time:''}]},{day:'Wednesday',subjects:[{subject:'',time:''}]},{day:'Thursday',subjects:[{subject:'',time:''}]},{day:'Friday',subjects:[{subject:'',time:''}]}];
+    toggleTimetableEditor(); document.getElementById('createModal').classList.add('show');
+    const btn=document.querySelector('.btn-post'); btn.disabled=false; btn.textContent='Post';
+};
+window.closeCreateModal=()=>document.getElementById('createModal').classList.remove('show');
+window.previewMedia=(e)=>{
+    const f=e.target.files[0]; if(!f)return; postMediaFile=f; mediaType=f.type.startsWith('video/')?'video':'image';
+    const r=new FileReader(); r.onload=ev=>{
+        document.getElementById('mediaPreview').style.display='block';
+        if(mediaType==='video'){ document.getElementById('previewVideo').src=ev.target.result; document.getElementById('previewVideo').style.display='block'; document.getElementById('previewImg').style.display='none'; }
+        else { document.getElementById('previewImg').src=ev.target.result; document.getElementById('previewImg').style.display='block'; document.getElementById('previewVideo').style.display='none'; }
+    }; r.readAsDataURL(f);
+};
+window.removeMedia=()=>{ postMediaFile=null; document.getElementById('mediaPreview').style.display='none'; document.getElementById('postMediaInput').value=''; };
+window.createPost=async()=>{
+    const btn=document.querySelector('.btn-post'); const orig=btn.textContent; if(btn.disabled)return;
+    const type=document.getElementById('postType')?.value||'normal'; const visibility=document.getElementById('postVisibility').value;
+    const content=type==='normal'?document.getElementById('postContent').value.trim():'';
+    if(type==='timetable'){ const cls=document.getElementById('timetableClassSelect').value; if(!cls){showToast('Select a class','error');return;} if(!timetableData.some(d=>d.subjects.some(s=>s.subject.trim()))){showToast('Add at least one subject','error');return;} }
+    else if(!content&&!postMediaFile){showToast('Add content or media','error');return;}
+    btn.disabled=true; btn.textContent='Posting...';
+    let schoolId=currentUser.school_id;
+    if(!schoolId){ const {data:ud}=await sb.from('users').select('school_id').eq('id',currentUser.id).single(); schoolId=ud?.school_id; if(schoolId){currentUser.school_id=schoolId; localStorage.setItem('aou_user',JSON.stringify(currentUser));} }
+    if(!schoolId){
+        const defaultSchoolName=currentUser.school||'My School';
+        let {data:existingSchool}=await sb.from('schools').select('id').eq('name',defaultSchoolName).single();
+        if(!existingSchool){ const {data:newSchool}=await sb.from('schools').insert({name:defaultSchoolName}).select('id').single(); existingSchool=newSchool; }
+        if(existingSchool){ schoolId=existingSchool.id; await sb.from('users').update({school_id:schoolId}).eq('id',currentUser.id); currentUser.school_id=schoolId; localStorage.setItem('aou_user',JSON.stringify(currentUser)); }
+        else { showToast('Could not create school','error'); btn.disabled=false; btn.textContent=orig; return; }
+    }
+    let mediaUrl=null, mediaTypeDb='image';
+    if(postMediaFile){
+        if(postMediaFile.size>MAX_FILE_SIZE){ showToast('File exceeds 50MB limit','error'); btn.disabled=false; btn.textContent=orig; return; }
+        mediaTypeDb=postMediaFile.type.startsWith('video/')?'video':'image';
+        const ext=postMediaFile.name.split('.').pop(); const path=`${currentUser.id}/${Date.now()}.${ext}`;
+        const {error:upErr}=await sb.storage.from('posts').upload(path,postMediaFile); if(upErr){showToast('Upload failed','error'); btn.disabled=false; btn.textContent=orig; return;}
+        mediaUrl=sb.storage.from('posts').getPublicUrl(path).data.publicUrl;
+    }
+    const exp=new Date(Date.now()+24*60*60*1000).toISOString();
+    const {data:post,error:postError}=await sb.from('posts').insert({user_id:currentUser.id,school_id:schoolId,content:content||'',media_url:mediaUrl,media_type:mediaTypeDb,expires_at:exp,visibility,type,comment_count:0}).select().single();
+    if(postError){showToast('Failed to create post','error'); btn.disabled=false; btn.textContent=orig; return;}
+    if(type==='timetable'){ const cls=document.getElementById('timetableClassSelect').value; const rows=[]; timetableData.forEach(dd=>{dd.subjects.forEach(s=>{if(s.subject.trim())rows.push({post_id:post.id,day:dd.day,subject:s.subject.trim(),time:s.time.trim()||null,class:cls});});}); if(rows.length) await sb.from('timetables').insert(rows); }
+    closeCreateModal(); showToast('Post created!','success'); await loadPosts(); btn.disabled=false; btn.textContent=orig;
+};
+window.openMediaViewer=(url,type)=>{ currentMediaUrl=url; currentMediaType=type; const content=document.getElementById('mediaViewerContent'); content.innerHTML=type==='video'?`<video controls autoplay src="${url}"></video>`:`<img src="${url}">`; document.getElementById('mediaViewerModal').classList.add('show'); };
+window.closeMediaViewer=()=>{ document.getElementById('mediaViewerModal').classList.remove('show'); document.getElementById('mediaViewerContent').innerHTML=''; };
+window.downloadMedia=()=>{ const a=document.createElement('a'); a.href=currentMediaUrl; a.download=currentMediaType==='video'?'video.mp4':'image.jpg'; a.click(); };
+window.openComments=async(pid)=>{ activePostId=pid; replyToCommentId=null; clearReply(); replyVisibility.clear(); commentRoots=[]; commentAuthorMap.clear(); document.getElementById('commentsModal').classList.add('show'); await loadComments(pid); };
+window.closeCommentsModal=()=>{ document.getElementById('commentsModal').classList.remove('show'); activePostId=null; };
+async function loadComments(pid){
+    const container=document.getElementById('commentsList'); container.innerHTML='<div style="text-align:center;padding:20px;">Loading...</div>';
+    const {data:comments}=await sb.from('comments').select('*, users(name,avatar_url,initials)').eq('post_id',pid).order('created_at',{ascending:true});
+    if(!comments?.length){container.innerHTML='<div class="empty-state">No comments yet</div>';commentRoots=[];return;}
+    const map=new Map(); comments.forEach(c=>{c.replies=[]; map.set(String(c.id),c); commentAuthorMap.set(String(c.id), c.users?.name || 'Unknown');});
+    const roots=[]; comments.forEach(c=>{if(c.parent_id&&map.has(String(c.parent_id))) map.get(String(c.parent_id)).replies.push(c); else if(!c.parent_id) roots.push(c);});
+    commentRoots=roots; container.innerHTML=roots.map(c=>renderComment(c,false,null)).join('');
+}
+function renderComment(c,isReply,parentAuthor){
+    const u=c.users||{}; const avatar=u.avatar_url?`<img src="${u.avatar_url}">`:(u.initials||'?'); const cid=String(c.id); const expanded=replyVisibility.get(cid)===true; const authorName=u.name||'Unknown';
+    let headerHtml=isReply&&parentAuthor?`<div class="comment-avatar">${avatar}</div><span class="comment-author">${escapeHtml(authorName)}</span><span class="reply-to-arrow">▶</span><span class="reply-to-name">${escapeHtml(parentAuthor)}</span><span class="comment-time">${getTimeAgo(c.created_at)}</span>`:`<div class="comment-avatar">${avatar}</div><span class="comment-author">${escapeHtml(authorName)}</span><span class="comment-time">${getTimeAgo(c.created_at)}</span>`;
+    let repliesHtml=''; if(!isReply&&expanded&&c.replies?.length){ const flatReplies=c.replies.map(r=>{ const rParentAuthor=commentAuthorMap.get(String(r.parent_id))||authorName; return renderComment(r,true,rParentAuthor); }).join(''); repliesHtml=`<div class="replies-container">${flatReplies}</div>`; }
+    let ctrl=''; if(!isReply&&c.replies?.length){ if(expanded) ctrl=`<div class="hide-replies-btn" onclick="toggleReplies('${cid}')">— Hide ▲</div>`; else ctrl=`<div class="view-replies-btn" onclick="toggleReplies('${cid}')">— View ${c.replies.length} ${c.replies.length===1?'reply':'replies'} ▼</div>`; }
+    return `<div class="comment-item"><div class="comment-header">${headerHtml}</div><div class="comment-content">${escapeHtml(c.content||'')}</div>${c.image_url?`<img src="${c.image_url}" class="comment-image">`:''}<div class="reply-btn" onclick="setReplyTo('${cid}','${escapeAttr(authorName)}')">↩ Reply</div>${ctrl}${repliesHtml}</div>`;
+}
+window.toggleReplies=(id)=>{ replyVisibility.set(id,!replyVisibility.get(id)); document.getElementById('commentsList').innerHTML=commentRoots.map(c=>renderComment(c,false,null)).join(''); };
+window.setReplyTo=(id,author)=>{ replyToCommentId=id; replyToCommentAuthor=author; document.getElementById('replyIndicatorText').textContent=`Replying to ${author}`; document.getElementById('replyIndicator').classList.add('show'); document.getElementById('commentInput').placeholder=`Reply to ${author}...`; document.getElementById('commentInput').focus(); };
+window.clearReply=()=>{ replyToCommentId=null; document.getElementById('replyIndicator').classList.remove('show'); document.getElementById('commentInput').placeholder='Write a comment...'; };
+window.submitComment=async()=>{
+    const content=document.getElementById('commentInput').value.trim(); const imgFile=document.getElementById('commentImageInput').files[0]; if(!content&&!imgFile)return;
+    let img=null; if(imgFile){ const ext=imgFile.name.split('.').pop(); const path=`comments/${Date.now()}.${ext}`; await sb.storage.from('posts').upload(path,imgFile); img=sb.storage.from('posts').getPublicUrl(path).data.publicUrl; }
+    const parentId=replyToCommentId||null; let attachParentId=parentId;
+    if(parentId){ const findRoot=(id)=>{ for(const root of commentRoots){ if(String(root.id)===String(id)) return String(root.id); for(const r of (root.replies||[])){ if(String(r.id)===String(id)) return String(root.id); } } return id; }; attachParentId=findRoot(parentId); }
+    const {error}=await sb.from('comments').insert({post_id:activePostId,user_id:currentUser.id,parent_id:attachParentId,content:content||'',image_url:img});
+    if(error){showToast('Failed to post comment','error');return;}
+    document.getElementById('commentInput').value=''; document.getElementById('commentImageInput').value=''; if(attachParentId) replyVisibility.set(String(attachParentId),true); clearReply(); await loadComments(activePostId);
+    const postInList=allPosts.find(p=>p.id===activePostId); if(postInList){ postInList.live_comment_count=(postInList.live_comment_count||0)+1; const badge=document.getElementById('ccount-'+activePostId); if(badge) badge.textContent='💬 '+postInList.live_comment_count; } showToast('Comment added','success');
+};
+async function updateUnreadBadge(){ if(!currentUser)return; const lr=localStorage.getItem('aou_last_read')||'{}'; const lastReadAt=JSON.parse(lr); const {data:msgs}=await sb.from('messages').select('*').eq('receiver_id',currentUser.id); let total=0; (msgs||[]).forEach(m=>{if(m.created_at>(lastReadAt[m.sender_id]||'1970-01-01'))total++;}); const badge=document.getElementById('chatNavBadge'); if(total>0){badge.textContent=total>99?'99+':total; badge.style.display='flex';}else badge.style.display='none'; }
+function subscribeToUnread(){ if(unreadSubscription)sb.removeChannel(unreadSubscription); unreadSubscription=sb.channel('unread-posts').on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`receiver_id=eq.${currentUser.id}`},updateUnreadBadge).subscribe(); }
+function escapeHtml(t){ const d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
+function escapeAttr(t){ return String(t).replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
+const hiddenType=document.createElement('input'); hiddenType.type='hidden'; hiddenType.id='postType'; document.body.appendChild(hiddenType);
+init();
+</script>
+<script src="heartbeat.js"></script>
+<script> if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').then(() => console.log('Service Worker registered')).catch((err) => console.log('SW registration failed:', err)); } </script>
+</body>
+</html>

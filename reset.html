@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Discovr – Reset Password</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<!-- Font Awesome 6 (free) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body {
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    background: #000;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.card {
+    max-width: 400px;
+    width: 100%;
+    background: rgba(20,20,20,0.9);
+    border: 1px solid rgba(128,0,255,0.25);
+    border-radius: 24px;
+    padding: 32px 24px;
+    backdrop-filter: blur(20px);
+}
+.logo {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 48px;
+    font-weight: 700;
+    text-align: center;
+    color: #8c36ff;
+    margin-bottom: 24px;
+}
+h2 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 8px;
+}
+.sub {
+    text-align: center;
+    font-size: 14px;
+    color: #c7b2ff;
+    margin-bottom: 24px;
+}
+.field { margin-bottom: 16px; position: relative; }
+.field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.55);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+}
+.field input {
+    width: 100%;
+    padding: 14px 15px;
+    background: rgba(0,0,0,0.4);
+    border: 1.5px solid rgba(128,0,255,0.25);
+    border-radius: 13px;
+    color: white;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.field input:focus { border-color: #8c36ff; }
+.password-toggle {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 20px;
+    line-height: 1;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    user-select: none;
+    color: #c7b2ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.password-toggle:hover { opacity: 1; color: #8c36ff; }
+.btn {
+    width: 100%;
+    padding: 15px;
+    background: #8c36ff;
+    color: white;
+    border: none;
+    border-radius: 13px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    margin-top: 6px;
+    box-shadow: 0 6px 20px rgba(140,54,255,0.4);
+    transition: transform 0.12s;
+}
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(16px);
+    background: rgba(20,20,20,0.95);
+    color: white;
+    padding: 11px 22px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-weight: 600;
+    opacity: 0;
+    transition: all 0.28s;
+    z-index: 9000;
+    border: 1px solid #8c36ff;
+    backdrop-filter: blur(10px);
+    max-width: 88%;
+    text-align: center;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.err  { background: rgba(180,40,40,0.95); border-color: #ff4444; }
+.toast.ok   { background: rgba(0,120,80,0.95); border-color: #00cc88; }
+.bsp {
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #8c36ff;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="card">
+    <div class="logo">Discovr</div>
+    <h2>Set New Password</h2>
+    <p class="sub">Enter a new password for your account</p>
+    <div class="field">
+        <label>New Password</label>
+        <input type="password" id="newPassword" placeholder="Min 6 characters" minlength="6">
+    </div>
+    <button class="btn" id="resetBtn" onclick="updatePassword()">Update Password →</button>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const sb = window.supabase.createClient('https://oyeojlvrjhaymbhohxdq.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im95ZW9qbHZyamhheW1iaG9oeGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNzMxNDYsImV4cCI6MjA5MDk0OTE0Nn0.aL-Y0hXjfpSIfqnwX-CDhoYLu5fsaMZPr6wW_VxxYj8');
+function toast(msg, type=''){ const t=document.getElementById('toast'); t.textContent=msg; t.className='toast '+type+' show'; clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),3200); }
+function setBtn(id,loading,label){ const b=document.getElementById(id); b.disabled=loading; b.innerHTML=loading?'<span class="bsp"></span>Please wait…':label; }
+async function init() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) {
+        toast('Invalid or expired reset link. Please request a new one.', 'err');
+        setTimeout(() => window.location.href = 'index.html', 2000);
+        return;
+    }
+}
+window.updatePassword = async () => {
+    const newPassword = document.getElementById('newPassword').value.trim();
+    if (!newPassword) { toast('Enter a password', 'err'); return; }
+    if (newPassword.length < 6) { toast('Password must be at least 6 characters', 'err'); return; }
+    setBtn('resetBtn', true, 'Update Password →');
+    const { error } = await sb.auth.updateUser({ password: newPassword });
+    setBtn('resetBtn', false, 'Update Password →');
+    if (error) { toast(error.message, 'err'); return; }
+    toast('Password updated! Redirecting...', 'ok');
+    setTimeout(() => window.location.href = 'index.html', 1500);
+};
+// Password visibility toggle (centered)
+function addToggle() {
+    const input = document.getElementById('newPassword');
+    if (!input) return;
+    const parent = input.closest('.field');
+    if (!parent) return;
+    if (parent.querySelector('.password-toggle')) return;
+    const toggle = document.createElement('span');
+    toggle.className = 'password-toggle';
+    toggle.innerHTML = '<i class="far fa-eye"></i>';
+    let visible = false;
+    toggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        visible = !visible;
+        input.type = visible ? 'text' : 'password';
+        toggle.innerHTML = visible ? '<i class="far fa-eye-slash"></i>' : '<i class="far fa-eye"></i>';
+        input.focus();
+    });
+    parent.appendChild(toggle);
+}
+document.addEventListener('DOMContentLoaded', addToggle);
+init();
+</script>
+</body>
+</html>
