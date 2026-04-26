@@ -826,5 +826,17 @@ if ('serviceWorker' in navigator) {
         .catch(err => console.log('SW registration failed:', err));
 }
 </script>
+    
+    <script>
+document.addEventListener('backbutton', function(e) {
+    if (window.location.pathname !== '/index.html' && history.length > 1) {
+        e.preventDefault();
+        history.back();
+    } else {
+        // If available, exit the app; otherwise do nothing
+        if (navigator.app && navigator.app.exitApp) navigator.app.exitApp();
+    }
+}, false);
+</script>
 </body>
 </html>
