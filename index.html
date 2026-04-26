@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+/* (all styles exactly as you had – no changes) */
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 body {
     font-family: 'DM Sans', sans-serif;
@@ -216,6 +217,14 @@ body {
     vertical-align: middle; margin-right: 6px;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+/* Warning text for sign-up */
+.warning-text {
+    font-size: 10px;
+    color: #c7b2ff;
+    text-align: center;
+    margin: 12px 0 8px;
+    opacity: 0.8;
+}
 </style>
 </head>
 <body>
@@ -250,6 +259,10 @@ body {
             <div class="field-row">
                 <div class="field"><label>Class</label><select id="su-class"><option value="">Select</option><option>JSS1</option><option>JSS2</option><option>JSS3</option><option>SS1</option><option>SS2</option><option>SS3</option></select></div>
                 <div class="field"><label>Department</label><select id="su-dept"><option value="">Select</option><option>Science</option><option>Art</option><option>Commercial</option></select></div>
+            </div>
+            <!-- Tiny warning text added here -->
+            <div class="warning-text">
+                ⚠️ If your details are fake, your account will be deleted/disabled. Please enter your correct details.
             </div>
             <button class="btn" id="su-btn" onclick="register()">Create Account →</button>
             <div class="form-footer">Have an account? <a onclick="sw('in')">Sign in</a></div>
@@ -290,8 +303,12 @@ async function login(){
         localStorage.setItem('aou_user',JSON.stringify(user));
         if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
         await sb.from('users').update({last_seen:new Date().toISOString()}).eq('id',user.id);
+        await new Promise(r=>setTimeout(r,100));
+        window.location.href='everyone.html';
+    } else {
+        setBtn('li-btn',false,'Sign In →');
+        toast('Failed to load profile', 'err');
     }
-    toast('Welcome back! 👋','ok'); setTimeout(()=>window.location.href='everyone.html',800);
 }
 async function register(){
     const name=document.getElementById('su-name').value.trim(), email=document.getElementById('su-email').value.trim(), pass=document.getElementById('su-pass').value, school=document.getElementById('su-school').value.trim(), cls=document.getElementById('su-class').value, dept=document.getElementById('su-dept').value;
@@ -309,7 +326,8 @@ async function register(){
             localStorage.setItem('aou_user',JSON.stringify(user));
             if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
             await sb.from('users').update({last_seen:new Date().toISOString()}).eq('id',user.id);
-            toast('Account created! Welcome 🎉','ok'); setTimeout(()=>window.location.href='everyone.html',900);
+            await new Promise(r=>setTimeout(r,100));
+            window.location.href='everyone.html';
         }
         else{setBtn('su-btn',false,'Create Account →');toast('Account created! Please sign in.','ok'); setTimeout(()=>sw('in'),1800);}
     }
