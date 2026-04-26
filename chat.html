@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+/* ... (your existing CSS unchanged) ... */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -68,7 +69,6 @@ body {
     width: 100%; overflow-x: hidden;
     background: #0d0d0d;
 }
-/* ── NEW MESSAGE LAYOUT (tick outside bubble) ── */
 .message {
     display: flex;
     flex-direction: column;
@@ -125,7 +125,6 @@ body {
 .msg-tick.seen {
     color: #c49eff;
 }
-/* Quote styling (inside bubble) */
 .reply-quote {
     background: rgba(0,0,0,0.25);
     border-left: 3px solid #d4aaff;
@@ -162,7 +161,6 @@ body {
     text-overflow: ellipsis;
     line-height: 1.35;
 }
-/* Swipe to reply */
 .swipe-wrapper {
     position: relative;
     display: flex;
@@ -203,7 +201,6 @@ body {
     user-select: none;
 }
 .bubble-inner.dragging { transition: none; }
-/* Reply bar */
 .reply-bar {
     display: none; align-items: center; gap: 8px; padding: 8px 12px; margin-bottom: 8px;
     background: #1a1a1a; border-left: 3px solid #8c36ff; border-radius: 0 10px 10px 0;
@@ -214,7 +211,6 @@ body {
 .reply-bar-name  { font-size: 11px; color: #b07fff; font-weight: 600; margin-bottom: 1px; }
 .reply-bar-text  { font-size: 13px; color: #c7b2ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .reply-bar-close { background: none; border: none; color: #888; font-size: 18px; cursor: pointer; flex-shrink: 0; line-height: 1; }
-/* Input area */
 .chat-input { padding: 16px; border-top: 1px solid rgba(128,0,255,0.22); background: #000; flex-shrink: 0; }
 .attachment-preview {
     margin-bottom: 12px; background: #1a1a1a; padding: 8px 12px;
@@ -235,7 +231,6 @@ body {
     background: none; border: none; font-size: 22px; cursor: pointer;
     padding: 8px; display: flex; align-items: center; justify-content: center; color: #8c36ff;
 }
-/* User select modal */
 .user-select-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #000; z-index: 2000; overflow-y: auto; }
 .user-select-modal.show { display: block; }
 .user-select-header { padding: 16px; border-bottom: 1px solid rgba(128,0,255,0.22); display: flex; align-items: center; gap: 16px; position: sticky; top: 0; background: #000; }
@@ -247,7 +242,6 @@ body {
 .user-list-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .user-list-name { font-weight: 600; }
 .user-list-details { font-size: 13px; color: #c7b2ff; }
-/* Bottom nav */
 .bottom-nav {
     position: fixed; bottom: 0; left: 0; right: 0; max-width: 500px;
     margin: 0 auto; background: rgba(0,0,0,0.95); border-top: 1px solid rgba(128,0,255,0.22);
@@ -331,6 +325,24 @@ let replyToContent = null;
 let replyToSenderName = null;
 const lastReadAt = {};
 let messagesCache = [];
+
+// ── REQUEST NOTIFICATION PERMISSION (kept on this page) ──
+async function requestNotificationPermission() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'default') {
+        // This will show a browser prompt that stays until user responds.
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+            console.log('Notification permission granted.');
+        } else {
+            console.log('Notification permission denied.');
+        }
+    } else if (Notification.permission === 'granted') {
+        console.log('Already granted');
+    } else {
+        console.log('Denied previously');
+    }
+}
 
 // ── REPLY HELPERS ─────────────────────────────────────────────────────────────
 function setReply(content, senderName) {
@@ -453,7 +465,7 @@ function subscribeToSeenUpdates() {
         }).subscribe();
 }
 
-// ── RENDER ONE MESSAGE (new structure: bubble + footer) ──────────────────────
+// ── RENDER ONE MESSAGE ────────────────────────────────────────────────────────
 function renderMessageHtml(m) {
     const isSent = m.sender_id === currentUser.id;
     const dir    = isSent ? 'sent' : 'received';
@@ -468,7 +480,6 @@ function renderMessageHtml(m) {
             fileHtml = `<div style="margin-top:6px;"><a href="${m.file_url}" target="_blank" style="color:#c49eff;font-size:13px;">📎 Download file</a></div>`;
     }
 
-    // Quote parsing (name embedded as @Name: text)
     let quoteHtml = '';
     if (m.reply_to_content) {
         let quoteName = '';
@@ -492,7 +503,6 @@ function renderMessageHtml(m) {
     const safeContent = (m.content || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
     const safeName = escapeHtml(isSent ? (currentUser?.name || 'You') : (chatUser?.name || ''));
 
-    // Tick only for sent messages, placed in footer
     let tickHtml = '';
     if (isSent) {
         if (m.seen === true) {
@@ -557,6 +567,10 @@ async function init() {
         const { data: user } = await sb.from('users').select('*').eq('id', session.user.id).single();
         if (user) { currentUser = user; localStorage.setItem('aou_user', JSON.stringify(user)); }
     }
+    // Request notification permission here – after page has fully loaded and user is logged in.
+    // This prompt will remain on screen until user clicks Allow/Block.
+    await requestNotificationPermission();
+
     const lrStored = localStorage.getItem('aou_last_read');
     if (lrStored) Object.assign(lastReadAt, JSON.parse(lrStored));
     if (localStorage.getItem('disco_sound') === null) localStorage.setItem('disco_sound', 'true');
@@ -724,7 +738,6 @@ window.sendMessage = async () => {
         payload.reply_to_content = namePrefix + replyToContent;
     }
 
-    // Optimistic append
     const tempId = 'temp_' + Date.now();
     const optimistic = { id: tempId, ...payload, created_at: new Date().toISOString() };
     appendMessageToChat(optimistic);
