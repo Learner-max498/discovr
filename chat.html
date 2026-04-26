@@ -13,7 +13,6 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-/* ... (your existing CSS unchanged) ... */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -29,6 +28,28 @@ body {
     margin-left: auto; width: 40px; height: 40px; background: #8c36ff;
     border: none; border-radius: 50%; color: white; font-size: 24px;
     cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+/* Search Bar */
+.search-container {
+    margin-bottom: 16px;
+}
+.search-box {
+    width: 100%;
+    padding: 12px 16px;
+    background: #1a1a1a;
+    border: 1px solid rgba(128,0,255,0.22);
+    border-radius: 30px;
+    color: white;
+    font-size: 15px;
+    outline: none;
+    transition: all 0.2s;
+}
+.search-box:focus {
+    border-color: #8c36ff;
+    background: #111;
+}
+.search-box::placeholder {
+    color: #888;
 }
 .conversation-card {
     background: rgba(128,0,255,0.08); border: 1px solid rgba(128,0,255,0.22); border-radius: 16px;
@@ -271,6 +292,10 @@ body {
         <h1>Chats</h1>
         <button class="new-chat-btn" onclick="showUserSelect()">+</button>
     </div>
+    <!-- SEARCH BAR ADDED -->
+    <div class="search-container">
+        <input type="text" id="chatSearchInput" class="search-box" placeholder="Search chat name..." oninput="filterConversations()">
+    </div>
     <div id="conversationsList"><div class="empty-state">Loading conversations...</div></div>
 </div>
 
@@ -326,21 +351,15 @@ let replyToSenderName = null;
 const lastReadAt = {};
 let messagesCache = [];
 
-// ── REQUEST NOTIFICATION PERMISSION (kept on this page) ──
+// Store full conversations list for filtering
+let allConversations = [];
+let currentFilter = '';
+
+// ── REQUEST NOTIFICATION PERMISSION ────────────────────────────────────────
 async function requestNotificationPermission() {
     if (!('Notification' in window)) return;
     if (Notification.permission === 'default') {
-        // This will show a browser prompt that stays until user responds.
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-            console.log('Notification permission granted.');
-        } else {
-            console.log('Notification permission denied.');
-        }
-    } else if (Notification.permission === 'granted') {
-        console.log('Already granted');
-    } else {
-        console.log('Denied previously');
+        await Notification.requestPermission();
     }
 }
 
@@ -557,58 +576,49 @@ function appendMessageToChat(msg) {
     attachSwipeListeners();
 }
 
-// ── INIT ──────────────────────────────────────────────────────────────────────
-async function init() {
-    const stored = localStorage.getItem('aou_user');
-    if (stored) currentUser = JSON.parse(stored);
-    const { data: { session } } = await sb.auth.getSession();
-    if (!session) { window.location.href = 'index.html'; return; }
-    if (!currentUser) {
-        const { data: user } = await sb.from('users').select('*').eq('id', session.user.id).single();
-        if (user) { currentUser = user; localStorage.setItem('aou_user', JSON.stringify(user)); }
+// ── CHAT LIST RENDERING WITH FILTER ───────────────────────────────────────────
+function renderConversations(conversations) {
+    const container = document.getElementById('conversationsList');
+    if (!conversations.length) {
+        container.innerHTML = '<div class="empty-state">No conversations found</div>';
+        return;
     }
-    // Request notification permission here – after page has fully loaded and user is logged in.
-    // This prompt will remain on screen until user clicks Allow/Block.
-    await requestNotificationPermission();
-
-    const lrStored = localStorage.getItem('aou_last_read');
-    if (lrStored) Object.assign(lastReadAt, JSON.parse(lrStored));
-    if (localStorage.getItem('disco_sound') === null) localStorage.setItem('disco_sound', 'true');
-    await loadAllUsers();
-    await loadConversations();
-    conversationsSubscription = sb.channel('unread-watch')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${currentUser.id}` }, payload => {
-            const open = document.getElementById('chatModal').classList.contains('show');
-            if (!open) {
-                loadConversations(); playMessageSound();
-                const s = allUsers.find(u => u.id === payload.new.sender_id);
-                if (s) showBrowserNotification(`New message from ${s.name}`, payload.new.content || '📎 Attachment');
-            } else if (document.visibilityState !== 'visible') {
-                playMessageSound();
-                const s = allUsers.find(u => u.id === payload.new.sender_id);
-                if (s) showBrowserNotification(`New message from ${s.name}`, payload.new.content || '📎 Attachment');
-            }
-        }).subscribe();
-    const chatWith = localStorage.getItem('chat_with');
-    if (chatWith) {
-        const u = allUsers.find(x => x.id === chatWith) || (await sb.from('users').select('*').eq('id', chatWith).single()).data;
-        if (u) { chatUser = u; openChatModal(); }
-        localStorage.removeItem('chat_with');
-    }
+    container.innerHTML = conversations.map(c => {
+        const u = c.user, hasUnread = c.unreadCount > 0;
+        const av = u.avatar_url ? `<img src="${u.avatar_url}">` : (u.initials || '?');
+        const badge = hasUnread ? `<div class="unread-badge">${c.unreadCount > 99 ? '99+' : c.unreadCount}</div>` : '';
+        const preview = (c.lastMsg || '').substring(0, 40) + (c.lastMsg?.length > 40 ? '…' : '');
+        return `<div class="conversation-card" onclick="openChatWithUser('${u.id}')">
+            <div class="convo-avatar" style="position:relative;">${av}${badge}</div>
+            <div class="convo-info">
+                <div class="convo-name">${escapeHtml(u.name)}</div>
+                <div class="convo-preview${hasUnread ? ' unread' : ''}">${escapeHtml(preview)}</div>
+            </div>
+            <div class="convo-meta"><span class="convo-time${hasUnread ? ' unread' : ''}">${formatConvoTime(c.lastTime)}</span></div>
+        </div>`;
+    }).join('');
 }
 
-async function loadAllUsers() {
-    const { data } = await sb.from('users').select('*').order('name');
-    allUsers = (data || []).filter(u => u.id !== currentUser?.id && !u.is_admin);
+function filterConversations() {
+    const searchTerm = document.getElementById('chatSearchInput').value.toLowerCase().trim();
+    if (!searchTerm) {
+        renderConversations(allConversations);
+        return;
+    }
+    const filtered = allConversations.filter(c => c.user.name.toLowerCase().includes(searchTerm));
+    renderConversations(filtered);
 }
 
+// Store the full list when loaded
 async function loadConversations() {
     const { data: msgs } = await sb.from('messages').select('*')
         .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
         .order('created_at', { ascending: false });
     if (!msgs?.length) {
         document.getElementById('conversationsList').innerHTML = '<div class="empty-state"><div style="font-size:48px;">💬</div><div>No conversations yet</div></div>';
-        updateNavBadge(0); return;
+        updateNavBadge(0);
+        allConversations = [];
+        return;
     }
     const convsMap = new Map();
     for (const m of msgs) {
@@ -626,23 +636,15 @@ async function loadConversations() {
     const list = Array.from(convsMap.values()).map(c => ({ ...c, user: um[c.otherId] })).filter(c => c.user)
         .sort((a, b) => b.unreadCount !== a.unreadCount ? b.unreadCount - a.unreadCount : new Date(b.lastTime) - new Date(a.lastTime));
     updateNavBadge(list.reduce((s, c) => s + c.unreadCount, 0));
-    if (!list.length) {
-        document.getElementById('conversationsList').innerHTML = '<div class="empty-state"><div style="font-size:48px;">💬</div><div>No conversations yet</div></div>'; return;
+    allConversations = list;
+    // Apply current filter (if any) after loading
+    const searchTerm = document.getElementById('chatSearchInput').value.toLowerCase().trim();
+    if (searchTerm) {
+        const filtered = allConversations.filter(c => c.user.name.toLowerCase().includes(searchTerm));
+        renderConversations(filtered);
+    } else {
+        renderConversations(allConversations);
     }
-    document.getElementById('conversationsList').innerHTML = list.map(c => {
-        const u = c.user, hasUnread = c.unreadCount > 0;
-        const av = u.avatar_url ? `<img src="${u.avatar_url}">` : (u.initials || '?');
-        const badge = hasUnread ? `<div class="unread-badge">${c.unreadCount > 99 ? '99+' : c.unreadCount}</div>` : '';
-        const preview = (c.lastMsg || '').substring(0, 40) + (c.lastMsg?.length > 40 ? '…' : '');
-        return `<div class="conversation-card" onclick="openChatWithUser('${u.id}')">
-            <div class="convo-avatar" style="position:relative;">${av}${badge}</div>
-            <div class="convo-info">
-                <div class="convo-name">${escapeHtml(u.name)}</div>
-                <div class="convo-preview${hasUnread ? ' unread' : ''}">${escapeHtml(preview)}</div>
-            </div>
-            <div class="convo-meta"><span class="convo-time${hasUnread ? ' unread' : ''}">${formatConvoTime(c.lastTime)}</span></div>
-        </div>`;
-    }).join('');
 }
 
 function formatConvoTime(iso) {
@@ -654,6 +656,7 @@ function formatConvoTime(iso) {
     return d.toLocaleDateString([], { day: 'numeric', month: 'short' });
 }
 
+// ── USER SELECT & CHAT OPEN ───────────────────────────────────────────────────
 window.showUserSelect = () => { document.getElementById('userSelectModal').classList.add('show'); renderUserList(allUsers.filter(u => u.id !== currentUser.id)); };
 window.hideUserSelect = () => document.getElementById('userSelectModal').classList.remove('show');
 window.filterUserList = () => {
@@ -768,8 +771,50 @@ window.closeChat = () => {
     chatUser = null; messagesCache = []; clearReply(); loadConversations();
 };
 
-function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+// ── LOAD ALL USERS (for new chat) ────────────────────────────────────────────
+async function loadAllUsers() {
+    const { data } = await sb.from('users').select('*').order('name');
+    allUsers = (data || []).filter(u => u.id !== currentUser?.id && !u.is_admin);
+}
 
+// ── INIT ──────────────────────────────────────────────────────────────────────
+async function init() {
+    const stored = localStorage.getItem('aou_user');
+    if (stored) currentUser = JSON.parse(stored);
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { window.location.href = 'index.html'; return; }
+    if (!currentUser) {
+        const { data: user } = await sb.from('users').select('*').eq('id', session.user.id).single();
+        if (user) { currentUser = user; localStorage.setItem('aou_user', JSON.stringify(user)); }
+    }
+    await requestNotificationPermission();
+
+    const lrStored = localStorage.getItem('aou_last_read');
+    if (lrStored) Object.assign(lastReadAt, JSON.parse(lrStored));
+    if (localStorage.getItem('disco_sound') === null) localStorage.setItem('disco_sound', 'true');
+    await loadAllUsers();
+    await loadConversations();
+    conversationsSubscription = sb.channel('unread-watch')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${currentUser.id}` }, payload => {
+            const open = document.getElementById('chatModal').classList.contains('show');
+            if (!open) {
+                loadConversations(); playMessageSound();
+                const s = allUsers.find(u => u.id === payload.new.sender_id);
+                if (s) showBrowserNotification(`New message from ${s.name}`, payload.new.content || '📎 Attachment');
+            } else if (document.visibilityState !== 'visible') {
+                playMessageSound();
+                const s = allUsers.find(u => u.id === payload.new.sender_id);
+                if (s) showBrowserNotification(`New message from ${s.name}`, payload.new.content || '📎 Attachment');
+            }
+        }).subscribe();
+    const chatWith = localStorage.getItem('chat_with');
+    if (chatWith) {
+        const u = allUsers.find(x => x.id === chatWith) || (await sb.from('users').select('*').eq('id', chatWith).single()).data;
+        if (u) { chatUser = u; openChatModal(); }
+        localStorage.removeItem('chat_with');
+    }
+}
+function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
 init();
 </script>
 
