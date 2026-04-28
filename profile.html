@@ -34,6 +34,8 @@ body {
 .header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; }
 .header h1 { font-family: 'Space Grotesk', sans-serif; font-size:28px; font-weight:700; color:var(--text); }
 .feedback-btn { background:transparent; border:1px solid var(--primary); border-radius:20px; color:var(--primary); padding:8px 14px; font-size:13px; cursor:pointer; }
+.share-icon-btn { background:transparent; border:1px solid var(--primary); border-radius:50%; width:36px; height:36px; color:var(--primary); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
+.share-icon-btn:hover { background:rgba(140,54,255,0.2); }
 .profile-card { background:var(--surface); border:1px solid var(--border); border-radius:24px; padding:30px 20px; text-align:center; margin-bottom:24px; }
 .profile-avatar-container { position:relative; width:100px; height:100px; margin:0 auto 16px; cursor:pointer; }
 .profile-avatar { width:100px; height:100px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; font-weight:600; font-size:36px; overflow:hidden; }
@@ -86,7 +88,11 @@ body {
 <div class="bg"><div class="leak"></div></div>
 <div class="bottom-glow"></div>
 <div class="container">
-    <div class="header"><button class="feedback-btn" onclick="openFeedbackModal()">💬 Feedback</button><h1>Discovr</h1><div style="width:80px;"></div></div>
+    <div class="header">
+        <button class="feedback-btn" onclick="openFeedbackModal()">💬 Feedback</button>
+        <h1>Discovr</h1>
+        <button class="share-icon-btn" onclick="shareDiscovr()"><i class="fas fa-share-alt"></i></button>
+    </div>
     <div class="profile-card">
         <div class="profile-avatar-container" onclick="document.getElementById('avatarUpload').click()">
             <div class="profile-avatar" id="profileAvatarContainer"><img id="profileAvatarImg" style="display:none;"><span id="profileAvatarText">?</span></div>
@@ -120,6 +126,7 @@ body {
     <a href="chat.html" class="nav-item" id="chatNavItem"><div class="nav-icon"><i class="fas fa-comment-dots"></i></div><span>Chats</span><span class="nav-badge" id="chatNavBadge" style="display:none;">0</span></a>
     <a href="profile.html" class="nav-item active"><div class="nav-icon"><i class="fas fa-user-circle"></i></div><span>Profile</span></a>
 </div>
+
 <script>
 const sb = window.supabase.createClient('https://oyeojlvrjhaymbhohxdq.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im95ZW9qbHZyamhheW1iaG9oeGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNzMxNDYsImV4cCI6MjA5MDk0OTE0Nn0.aL-Y0hXjfpSIfqnwX-CDhoYLu5fsaMZPr6wW_VxxYj8');
 const MAX_AVATAR_SIZE = 50 * 1024 * 1024;
@@ -241,19 +248,32 @@ window.logout = async () => {
     localStorage.removeItem('aou_user');
     window.location.href = 'index.html';
 };
+
+// ─── SHARE FUNCTION (uses native share if available, otherwise copy) ─────────
+window.shareDiscovr = () => {
+    const shareUrl = 'https://loadly.io/8DheJbph';
+    const shareText = 'Join me on Discovr – connect with classmates, chat, share posts and timetables! Download here:';
+    if (navigator.share) {
+        navigator.share({
+            title: 'Discovr',
+            text: shareText,
+            url: shareUrl,
+        }).catch(err => {
+            if (err.name !== 'AbortError') {
+                showToast('Could not share', 'error');
+            }
+        });
+    } else {
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            showToast('Link copied to clipboard!', 'success');
+        }).catch(() => {
+            showToast('Failed to copy link', 'error');
+        });
+    }
+};
+
 init();
 </script>
 <script> if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').then(() => console.log('Service Worker registered')).catch((err) => console.log('SW registration failed:', err)); } </script>
-    <script>
-document.addEventListener('backbutton', function(e) {
-    if (window.location.pathname !== '/index.html' && history.length > 1) {
-        e.preventDefault();
-        history.back();
-    } else {
-        // If available, exit the app; otherwise do nothing
-        if (navigator.app && navigator.app.exitApp) navigator.app.exitApp();
-    }
-}, false);
-</script>
 </body>
 </html>
