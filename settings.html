@@ -64,6 +64,10 @@ body {
             <span class="toggle-label">Allow others to view my profile picture</span>
             <div id="profilePicToggle" class="toggle-switch"><div class="toggle-slider"></div></div>
         </div>
+        <div class="toggle-item">
+            <span class="toggle-label">Show my online status</span>
+            <div id="onlineStatusToggle" class="toggle-switch"><div class="toggle-slider"></div></div>
+        </div>
     </div>
     <div class="settings-card">
         <div class="settings-title">Notifications</div>
@@ -115,10 +119,12 @@ function showToast(msg, type) {
     setTimeout(() => t.remove(), 3000);
 }
 async function fetchUserSettings() {
-    const { data, error } = await sb.from('users').select('allow_profile_view, notify_comment_on_post').eq('id', currentUser.id).single();
+    const { data, error } = await sb.from('users').select('allow_profile_view, show_online_status, notify_comment_on_post').eq('id', currentUser.id).single();
     if (data) {
         if (data.allow_profile_view) document.getElementById('profilePicToggle').classList.add('active');
         else document.getElementById('profilePicToggle').classList.remove('active');
+        if (data.show_online_status !== false) document.getElementById('onlineStatusToggle').classList.add('active');
+        else document.getElementById('onlineStatusToggle').classList.remove('active');
         if (data.notify_comment_on_post) document.getElementById('commentNotifyToggle').classList.add('active');
         else document.getElementById('commentNotifyToggle').classList.remove('active');
     }
@@ -132,6 +138,12 @@ document.getElementById('profilePicToggle').addEventListener('click', function()
     if (newState) this.classList.add('active');
     else this.classList.remove('active');
     saveSetting('allow_profile_view', newState);
+});
+document.getElementById('onlineStatusToggle').addEventListener('click', function() {
+    const newState = !this.classList.contains('active');
+    if (newState) this.classList.add('active');
+    else this.classList.remove('active');
+    saveSetting('show_online_status', newState);
 });
 document.getElementById('commentNotifyToggle').addEventListener('click', function() {
     const newState = !this.classList.contains('active');
@@ -153,7 +165,6 @@ document.getElementById('changePwdBtn').addEventListener('click', async () => {
     showToast('Password updated! Please sign in again.', 'success');
     setTimeout(() => { sb.auth.signOut(); localStorage.removeItem('aou_user'); window.location.href = 'index.html'; }, 2000);
 });
-// Custom modal for forgot password
 document.getElementById('forgotPwdLink').addEventListener('click', () => {
     document.getElementById('forgotModal').classList.add('show');
 });
@@ -169,7 +180,6 @@ document.getElementById('sendResetLink').addEventListener('click', async () => {
 document.getElementById('closeForgotModal').addEventListener('click', () => {
     document.getElementById('forgotModal').classList.remove('show');
 });
-// Custom modal for feedback
 document.getElementById('feedbackBtn').addEventListener('click', () => {
     document.getElementById('feedbackModal').classList.add('show');
 });
@@ -194,7 +204,6 @@ document.getElementById('closeFeedbackModal').addEventListener('click', () => {
     document.getElementById('feedbackModal').classList.remove('show');
     document.getElementById('feedbackMessageInput').value = '';
 });
-// Share button
 document.getElementById('shareBtn').addEventListener('click', () => {
     const shareUrl = 'https://loadly.io/8DheJbph';
     if (navigator.share) {
