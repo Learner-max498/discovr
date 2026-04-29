@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title>Discovr – Settings</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<meta name="theme-color" content="#0e0a1a">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+    background: #000;
+    color: white;
+    font-family: 'DM Sans', sans-serif;
+    padding-bottom: 70px;
+}
+.container { max-width:500px; margin:0 auto; padding:20px; }
+.header { display:flex; align-items:center; gap:16px; margin-bottom:24px; }
+.header h1 { font-size:24px; font-weight:600; color:#8c36ff; }
+.back-btn { background:none; border:none; color:#8c36ff; font-size:20px; cursor:pointer; }
+.settings-card { background:rgba(20,20,20,0.8); border:1px solid rgba(128,0,255,0.25); border-radius:24px; padding:24px; margin-bottom:20px; backdrop-filter:blur(10px); }
+.settings-title { font-size:18px; font-weight:600; margin-bottom:16px; color:#c7b2ff; }
+.toggle-item { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+.toggle-label { font-size:15px; }
+.toggle-switch { width:52px; height:26px; background:#333; border-radius:26px; position:relative; cursor:pointer; transition:0.2s; }
+.toggle-switch.active { background:#8c36ff; }
+.toggle-slider { width:22px; height:22px; background:white; border-radius:50%; position:absolute; top:2px; left:3px; transition:0.2s; }
+.toggle-switch.active .toggle-slider { left:27px; }
+.field { margin-bottom:16px; }
+.field label { display:block; font-size:13px; margin-bottom:6px; color:#aaa; }
+.field input { width:100%; padding:12px; background:#1a1a1a; border:1px solid #333; border-radius:12px; color:white; font-size:14px; }
+.btn { width:100%; padding:14px; background:#8c36ff; border:none; border-radius:12px; color:white; font-weight:600; cursor:pointer; margin-top:8px; }
+.btn-secondary { background:#1a1a1a; border:1px solid #8c36ff; color:#8c36ff; }
+.link { color:#8c36ff; cursor:pointer; text-align:center; margin-top:12px; display:block; font-size:13px; }
+.toast { position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#1a1a1a; border:1px solid #8c36ff; padding:10px 20px; border-radius:30px; font-size:14px; z-index:2000; }
+.spinner { display:inline-block; width:18px; height:18px; border:2px solid rgba(255,255,255,0.2); border-top-color:#8c36ff; border-radius:50%; animation:spin 0.6s linear infinite; margin-right:8px; vertical-align:middle; }
+@keyframes spin { to { transform:rotate(360deg); } }
+/* Custom modal */
+.modal-custom {
+    display: none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.9); z-index:10000; align-items:center; justify-content:center; padding:20px;
+}
+.modal-custom.show { display:flex; }
+.modal-content-custom { background:#111; border:1px solid #8c36ff; border-radius:24px; padding:24px; width:100%; max-width:400px; }
+.modal-content-custom h3 { color:#8c36ff; margin-bottom:16px; }
+.modal-content-custom textarea, .modal-content-custom input { width:100%; padding:12px; background:#1a1a1a; border:1px solid #333; border-radius:12px; color:white; margin-bottom:16px; }
+.modal-content-custom button { width:100%; padding:12px; background:#8c36ff; border:none; border-radius:12px; color:white; cursor:pointer; margin-top:8px; }
+.modal-content-custom button.secondary { background:#1a1a1a; border:1px solid #ff4444; color:#ff4444; }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <button class="back-btn" onclick="history.back()"><i class="fas fa-arrow-left"></i></button>
+        <h1>Settings</h1>
+        <div style="width:30px;"></div>
+    </div>
+    <div class="settings-card">
+        <div class="settings-title">Privacy</div>
+        <div class="toggle-item">
+            <span class="toggle-label">Allow others to view my profile picture</span>
+            <div id="profilePicToggle" class="toggle-switch"><div class="toggle-slider"></div></div>
+        </div>
+    </div>
+    <div class="settings-card">
+        <div class="settings-title">Notifications</div>
+        <div class="toggle-item">
+            <span class="toggle-label">Notify me when someone comments on my post</span>
+            <div id="commentNotifyToggle" class="toggle-switch"><div class="toggle-slider"></div></div>
+        </div>
+    </div>
+    <div class="settings-card">
+        <div class="settings-title">Account</div>
+        <div class="field"><label>Current Password</label><input type="password" id="currentPassword" placeholder="Enter current password"></div>
+        <div class="field"><label>New Password</label><input type="password" id="newPassword" placeholder="Min 6 characters" minlength="6"></div>
+        <button class="btn" id="changePwdBtn">Change Password</button>
+        <div class="link" id="forgotPwdLink">Forgot password?</div>
+    </div>
+    <div class="settings-card">
+        <div class="settings-title">Support</div>
+        <button class="btn btn-secondary" id="feedbackBtn">💬 Send Feedback</button>
+        <button class="btn btn-secondary" id="shareBtn" style="margin-top:12px;">📢 Share Discovr</button>
+    </div>
+</div>
+
+<!-- Custom modals -->
+<div id="feedbackModal" class="modal-custom">
+    <div class="modal-content-custom">
+        <h3>Send Feedback</h3>
+        <textarea id="feedbackMessageInput" rows="3" placeholder="Share your thoughts, feature requests, or bug reports..."></textarea>
+        <button id="submitFeedbackCustom">Send</button>
+        <button class="secondary" id="closeFeedbackModal">Cancel</button>
+    </div>
+</div>
+<div id="forgotModal" class="modal-custom">
+    <div class="modal-content-custom">
+        <h3>Reset Password</h3>
+        <input type="email" id="forgotEmailInput" placeholder="Enter your email address">
+        <button id="sendResetLink">Send Reset Link</button>
+        <button class="secondary" id="closeForgotModal">Cancel</button>
+    </div>
+</div>
+
+<script>
+const sb = window.supabase.createClient('https://oyeojlvrjhaymbhohxdq.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im95ZW9qbHZyamhheW1iaG9oeGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNzMxNDYsImV4cCI6MjA5MDk0OTE0Nn0.aL-Y0hXjfpSIfqnwX-CDhoYLu5fsaMZPr6wW_VxxYj8');
+let currentUser = null;
+function showToast(msg, type) {
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+}
+async function fetchUserSettings() {
+    const { data, error } = await sb.from('users').select('allow_profile_view, notify_comment_on_post').eq('id', currentUser.id).single();
+    if (data) {
+        if (data.allow_profile_view) document.getElementById('profilePicToggle').classList.add('active');
+        else document.getElementById('profilePicToggle').classList.remove('active');
+        if (data.notify_comment_on_post) document.getElementById('commentNotifyToggle').classList.add('active');
+        else document.getElementById('commentNotifyToggle').classList.remove('active');
+    }
+}
+async function saveSetting(field, value) {
+    await sb.from('users').update({ [field]: value }).eq('id', currentUser.id);
+    showToast('Setting saved', 'success');
+}
+document.getElementById('profilePicToggle').addEventListener('click', function() {
+    const newState = !this.classList.contains('active');
+    if (newState) this.classList.add('active');
+    else this.classList.remove('active');
+    saveSetting('allow_profile_view', newState);
+});
+document.getElementById('commentNotifyToggle').addEventListener('click', function() {
+    const newState = !this.classList.contains('active');
+    if (newState) this.classList.add('active');
+    else this.classList.remove('active');
+    saveSetting('notify_comment_on_post', newState);
+});
+document.getElementById('changePwdBtn').addEventListener('click', async () => {
+    const current = document.getElementById('currentPassword').value;
+    const newPwd = document.getElementById('newPassword').value;
+    if (!current || !newPwd) { showToast('Fill both fields', 'error'); return; }
+    if (newPwd.length < 6) { showToast('New password must be at least 6 characters', 'error'); return; }
+    const btn = document.getElementById('changePwdBtn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Updating...';
+    const { error: signError } = await sb.auth.signInWithPassword({ email: currentUser.email, password: current });
+    if (signError) { showToast('Current password is incorrect', 'error'); btn.disabled=false; btn.innerHTML='Change Password'; return; }
+    const { error: updateError } = await sb.auth.updateUser({ password: newPwd });
+    if (updateError) { showToast(updateError.message, 'error'); btn.disabled=false; btn.innerHTML='Change Password'; return; }
+    showToast('Password updated! Please sign in again.', 'success');
+    setTimeout(() => { sb.auth.signOut(); localStorage.removeItem('aou_user'); window.location.href = 'index.html'; }, 2000);
+});
+// Custom modal for forgot password
+document.getElementById('forgotPwdLink').addEventListener('click', () => {
+    document.getElementById('forgotModal').classList.add('show');
+});
+document.getElementById('sendResetLink').addEventListener('click', async () => {
+    const email = document.getElementById('forgotEmailInput').value.trim();
+    if (!email) { showToast('Enter your email', 'error'); return; }
+    const btn = document.getElementById('sendResetLink');
+    btn.disabled = true; btn.textContent = 'Sending...';
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/reset.html' });
+    btn.disabled = false; btn.textContent = 'Send Reset Link';
+    if (error) { showToast(error.message, 'error'); } else { showToast('Reset link sent to your email', 'success'); document.getElementById('forgotModal').classList.remove('show'); }
+});
+document.getElementById('closeForgotModal').addEventListener('click', () => {
+    document.getElementById('forgotModal').classList.remove('show');
+});
+// Custom modal for feedback
+document.getElementById('feedbackBtn').addEventListener('click', () => {
+    document.getElementById('feedbackModal').classList.add('show');
+});
+document.getElementById('submitFeedbackCustom').addEventListener('click', async () => {
+    const msg = document.getElementById('feedbackMessageInput').value.trim();
+    if (!msg) { showToast('Please enter a message', 'error'); return; }
+    const btn = document.getElementById('submitFeedbackCustom');
+    btn.disabled = true; btn.textContent = 'Sending...';
+    const { error } = await sb.from('feedbacks').insert({
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        user_email: currentUser.email,
+        message: msg
+    });
+    btn.disabled = false; btn.textContent = 'Send';
+    if (error) { showToast('Failed to send', 'error'); return; }
+    showToast('Thank you for your feedback!', 'success');
+    document.getElementById('feedbackModal').classList.remove('show');
+    document.getElementById('feedbackMessageInput').value = '';
+});
+document.getElementById('closeFeedbackModal').addEventListener('click', () => {
+    document.getElementById('feedbackModal').classList.remove('show');
+    document.getElementById('feedbackMessageInput').value = '';
+});
+// Share button
+document.getElementById('shareBtn').addEventListener('click', () => {
+    const shareUrl = 'https://loadly.io/8DheJbph';
+    if (navigator.share) {
+        navigator.share({ title: 'Discovr', text: 'Join me on Discovr – the school community app!', url: shareUrl });
+    } else {
+        navigator.clipboard.writeText(shareUrl).then(() => showToast('Link copied!', 'success'));
+    }
+});
+async function init() {
+    const stored = localStorage.getItem('aou_user');
+    if (stored) currentUser = JSON.parse(stored);
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { window.location.href = 'index.html'; return; }
+    if (!currentUser) {
+        const { data: user } = await sb.from('users').select('*').eq('id', session.user.id).single();
+        if (user) { currentUser = user; localStorage.setItem('aou_user', JSON.stringify(user)); }
+    }
+    await fetchUserSettings();
+}
+init();
+</script>
+</body>
+</html>
