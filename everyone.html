@@ -40,7 +40,7 @@ body {
 .filter-btn { padding:8px 16px; background:var(--surface2); border:1px solid var(--border); border-radius:20px; color:var(--text-secondary); cursor:pointer; font-size:13px; white-space:nowrap; }
 .filter-btn.active { background:var(--primary); color:white; border-color:var(--primary); }
 .user-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:16px; margin-bottom:10px; display:flex; align-items:center; gap:14px; cursor:pointer; }
-.user-avatar { width:52px; height:52px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; font-weight:600; font-size:18px; overflow:hidden; }
+.user-avatar { width:52px; height:52px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; font-weight:600; font-size:18px; overflow:hidden; flex-shrink:0; cursor:pointer; }
 .user-info { flex:1; }
 .user-name { font-weight:600; margin-bottom:4px; color:var(--text); }
 .user-details { font-size:13px; color:var(--text-secondary); }
@@ -58,6 +58,29 @@ body {
 .bottom-glow { position:fixed; bottom:0; left:0; right:0; height:200px; background:linear-gradient(0deg, rgba(128,0,255,0.08) 0%, transparent 100%); z-index:1; pointer-events:none; display:block; }
 .error-box { background: rgba(255,68,68,0.2); border: 1px solid #ff4444; border-radius: 16px; padding: 20px; text-align: center; margin: 40px 16px; }
 .error-box button { margin-top: 12px; padding: 10px 20px; background: #ff4444; border: none; border-radius: 30px; color: white; cursor: pointer; }
+
+.avatar-viewer {
+    display: none; position: fixed; top:0; left:0; right:0; bottom:0; background:#000; z-index:3000; flex-direction:column;
+}
+.avatar-viewer.show { display:flex; }
+.avatar-viewer-header { padding:16px; display:flex; align-items:center; gap:16px; background:rgba(0,0,0,0.8); }
+/* Style the back button inside the avatar viewer */
+.avatar-viewer-header .back-btn {
+    background: none;
+    border: none;
+    color: #8c36ff;          /* your purple accent */
+    font-size: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 30px;
+    transition: background 0.2s;
+}
+.avatar-viewer-header .back-btn:hover {
+    background: rgba(140, 54, 255, 0.2);
+}
+.avatar-viewer-content { flex:1; display:flex; align-items:center; justify-content:center; padding:20px; }
+.avatar-viewer-content img { max-width:90%; max-height:80vh; border-radius:20px; object-fit:contain; }
 </style>
 </head>
 <body>
@@ -81,6 +104,13 @@ body {
     <a href="profile.html" class="nav-item"><div class="nav-icon"><i class="fas fa-user-circle"></i></div><span>Profile</span></a>
 </div>
 
+<div class="avatar-viewer" id="avatarViewer">
+    <div class="avatar-viewer-header">
+        <button class="back-btn" onclick="closeAvatarViewer()">← Back</button>
+    </div>
+    <div class="avatar-viewer-content" id="avatarViewerContent"></div>
+</div>
+
 <script>
 const sb = window.supabase.createClient('https://oyeojlvrjhaymbhohxdq.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im95ZW9qbHZyamhheW1iaG9oeGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNzMxNDYsImV4cCI6MjA5MDk0OTE0Nn0.aL-Y0hXjfpSIfqnwX-CDhoYLu5fsaMZPr6wW_VxxYj8');
 
@@ -89,70 +119,56 @@ let allUsers = [];
 let currentFilter = 'all';
 let unreadSubscription = null;
 
-// Helper to show error message on page instead of redirecting
-function showError(message, showLogout = true) {
-    const container = document.getElementById('usersList');
-    container.innerHTML = `<div class="error-box">
-        <p>⚠️ ${message}</p>
-        ${showLogout ? '<button onclick="logout()">Go to Login</button>' : ''}
-    </div>`;
+function showToast(msg, type) {
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
 }
-
+function escapeHtml(t) { const d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
+function isOnline(lastSeen) { return lastSeen && (Date.now() - new Date(lastSeen)) < 2*60*1000; }
+function formatLastSeen(lastSeen) {
+    if (!lastSeen) return 'Never';
+    if (isOnline(lastSeen)) return 'Online now';
+    const diffMins = Math.floor((Date.now() - new Date(lastSeen))/60000);
+    if (diffMins < 60) return `${diffMins} min ago`;
+    if (diffMins < 1440) return `${Math.floor(diffMins/60)} hours ago`;
+    return new Date(lastSeen).toLocaleDateString();
+}
 async function ensureUser() {
-    // First try localStorage
     const stored = localStorage.getItem('aou_user');
     if (stored && stored !== 'undefined') {
         try {
             currentUser = JSON.parse(stored);
             if (currentUser && currentUser.id) return true;
-        } catch(e) { console.warn("Invalid stored user", e); }
+        } catch(e) { console.warn(e); }
     }
-    
-    // Fallback: fetch from Supabase session
     const { data: { session } } = await sb.auth.getSession();
-    if (!session) {
-        window.location.href = 'index.html';
-        return false;
-    }
-    
-    // Try to fetch user profile – if fails, show error (don't redirect)
+    if (!session) { window.location.href = 'index.html'; return false; }
     const { data: user, error } = await sb.from('users').select('*').eq('id', session.user.id).single();
-    if (error || !user) {
-        console.error("Profile fetch error:", error);
-        showError("Could not load your profile. RLS may be blocking access to the users table. Please check your RLS policies or contact support.", true);
-        return false;
-    }
-    
+    if (error || !user) { showToast('Could not load profile', 'error'); return false; }
     currentUser = user;
     localStorage.setItem('aou_user', JSON.stringify(user));
     return true;
 }
-
 async function init() {
-    const ok = await ensureUser();
-    if (!ok) return;
+    if (!await ensureUser()) return;
     await loadUsers();
     await updateUnreadBadge();
     subscribeToUnread();
 }
-
 async function loadUsers() {
     const { data: users, error } = await sb.from('users').select('*').order('created_at', { ascending: false });
-    if (error) {
-        console.error("Error loading users:", error);
-        showError("Failed to load users. RLS might be blocking SELECT on users table.", true);
-        return;
-    }
+    if (error) { showToast('Failed to load users', 'error'); return; }
     allUsers = (users || []).filter(u => u.id !== currentUser?.id && !u.is_admin);
     filterUsers();
 }
-
 window.setFilter = function(f) {
     currentFilter = f;
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === f));
     filterUsers();
 };
-
 window.filterUsers = function() {
     const term = document.getElementById('searchInput').value.toLowerCase().trim();
     let filtered = [...allUsers];
@@ -163,15 +179,12 @@ window.filterUsers = function() {
         else if (currentFilter === 'dept') filtered = filtered.filter(u => u.department === currentUser.department);
     }
     const container = document.getElementById('usersList');
-    if (!filtered.length) {
-        container.innerHTML = '<div class="empty-state"><div style="font-size:48px;">👥</div><div>No users found</div></div>';
-        return;
-    }
+    if (!filtered.length) { container.innerHTML = '<div class="empty-state">No users found</div>'; return; }
     container.innerHTML = filtered.map(user => {
         const avatar = user.avatar_url ? `<img src="${user.avatar_url}" style="width:100%;height:100%;object-fit:cover;">` : (user.initials || '?');
-        return `<div class="user-card" onclick="startChat('${user.id}')">
-            <div class="user-avatar">${avatar}</div>
-            <div class="user-info">
+        return `<div class="user-card">
+            <div class="user-avatar" onclick="event.stopPropagation(); viewAvatar('${user.id}', '${escapeHtml(user.name)}')">${avatar}</div>
+            <div class="user-info" onclick="startChat('${user.id}')">
                 <div class="user-name">${escapeHtml(user.name)}</div>
                 <div class="user-details">${escapeHtml(user.school)} · Class ${escapeHtml(user.class)} · ${escapeHtml(user.department)}</div>
             </div>
@@ -179,12 +192,26 @@ window.filterUsers = function() {
         </div>`;
     }).join('');
 };
-
+window.viewAvatar = async (userId, userName) => {
+    const { data: user, error } = await sb.from('users').select('allow_profile_view, avatar_url').eq('id', userId).single();
+    if (error || !user) { showToast('Could not load user info', 'error'); return; }
+    if (!user.allow_profile_view && userId !== currentUser.id) {
+        showToast(`${userName} has disabled profile picture viewing.`, 'error');
+        return;
+    }
+    if (!user.avatar_url) { showToast('No profile picture set.', 'error'); return; }
+    const content = document.getElementById('avatarViewerContent');
+    content.innerHTML = `<img src="${user.avatar_url}" alt="${escapeHtml(userName)}">`;
+    document.getElementById('avatarViewer').classList.add('show');
+};
+window.closeAvatarViewer = () => {
+    document.getElementById('avatarViewer').classList.remove('show');
+    document.getElementById('avatarViewerContent').innerHTML = '';
+};
 window.startChat = (userId) => {
     localStorage.setItem('chat_with', userId);
     window.location.href = 'chat.html';
 };
-
 async function updateUnreadBadge() {
     if (!currentUser) return;
     const lr = localStorage.getItem('aou_last_read') || '{}';
@@ -193,14 +220,9 @@ async function updateUnreadBadge() {
     let total = 0;
     (msgs || []).forEach(m => { if (m.created_at > (lastReadAt[m.sender_id] || '1970-01-01')) total++; });
     const badge = document.getElementById('chatNavBadge');
-    if (total > 0) {
-        badge.textContent = total > 99 ? '99+' : total;
-        badge.style.display = 'flex';
-    } else {
-        badge.style.display = 'none';
-    }
+    if (total > 0) { badge.textContent = total > 99 ? '99+' : total; badge.style.display = 'flex'; }
+    else badge.style.display = 'none';
 }
-
 function subscribeToUnread() {
     if (unreadSubscription) sb.removeChannel(unreadSubscription);
     if (!currentUser) return;
@@ -208,36 +230,21 @@ function subscribeToUnread() {
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${currentUser.id}` }, () => updateUnreadBadge())
         .subscribe();
 }
-
-window.logout = async function() {
+window.logout = async () => {
     await sb.auth.signOut();
     localStorage.removeItem('aou_user');
     window.location.href = 'index.html';
 };
-
-function escapeHtml(t) {
-    const d = document.createElement('div');
-    d.textContent = t;
-    return d.innerHTML;
-}
-
 init();
 </script>
 <script src="heartbeat.js"></script>
 <script>
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js')
-      .then(() => console.log('Service Worker registered'))
-      .catch((err) => console.log('SW registration failed:', err));
-}
-</script>
-    <script>
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').then(() => console.log('Service Worker registered')).catch((err) => console.log('SW registration failed:', err)); }
 document.addEventListener('backbutton', function(e) {
     if (window.location.pathname !== '/index.html' && history.length > 1) {
         e.preventDefault();
         history.back();
     } else {
-        // If available, exit the app; otherwise do nothing
         if (navigator.app && navigator.app.exitApp) navigator.app.exitApp();
     }
 }, false);
