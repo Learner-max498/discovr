@@ -212,6 +212,8 @@ async function init(){
     const stored=localStorage.getItem('aou_user'); if(stored) currentUser=JSON.parse(stored);
     const {data:{session}}=await sb.auth.getSession(); if(!session){window.location.href='index.html';return;}
     if(!currentUser){ const {data:user}=await sb.from('users').select('*').eq('id',session.user.id).single(); if(user){currentUser=user; localStorage.setItem('aou_user',JSON.stringify(user));} }
+    // Request notification permission for comment alerts
+    if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
     await loadPosts(); await updateUnreadBadge(); subscribeToUnread(); populateClassSelect();
 }
 function populateClassSelect(){ const s=document.getElementById('timetableClassSelect'); s.innerHTML='<option value="">-- Select Class --</option>'+CLASS_OPTIONS.map(c=>`<option value="${c}">${c}</option>`).join(''); }
@@ -348,15 +350,78 @@ function renderComment(c,isReply,parentAuthor){
 window.toggleReplies=(id)=>{ replyVisibility.set(id,!replyVisibility.get(id)); document.getElementById('commentsList').innerHTML=commentRoots.map(c=>renderComment(c,false,null)).join(''); };
 window.setReplyTo=(id,author)=>{ replyToCommentId=id; replyToCommentAuthor=author; document.getElementById('replyIndicatorText').textContent=`Replying to ${author}`; document.getElementById('replyIndicator').classList.add('show'); document.getElementById('commentInput').placeholder=`Reply to ${author}...`; document.getElementById('commentInput').focus(); };
 window.clearReply=()=>{ replyToCommentId=null; document.getElementById('replyIndicator').classList.remove('show'); document.getElementById('commentInput').placeholder='Write a comment...'; };
-window.submitComment=async()=>{
-    const content=document.getElementById('commentInput').value.trim(); const imgFile=document.getElementById('commentImageInput').files[0]; if(!content&&!imgFile)return;
-    let img=null; if(imgFile){ const ext=imgFile.name.split('.').pop(); const path=`comments/${Date.now()}.${ext}`; await sb.storage.from('posts').upload(path,imgFile); img=sb.storage.from('posts').getPublicUrl(path).data.publicUrl; }
-    const parentId=replyToCommentId||null; let attachParentId=parentId;
-    if(parentId){ const findRoot=(id)=>{ for(const root of commentRoots){ if(String(root.id)===String(id)) return String(root.id); for(const r of (root.replies||[])){ if(String(r.id)===String(id)) return String(root.id); } } return id; }; attachParentId=findRoot(parentId); }
-    const {error}=await sb.from('comments').insert({post_id:activePostId,user_id:currentUser.id,parent_id:attachParentId,content:content||'',image_url:img});
-    if(error){showToast('Failed to post comment','error');return;}
-    document.getElementById('commentInput').value=''; document.getElementById('commentImageInput').value=''; if(attachParentId) replyVisibility.set(String(attachParentId),true); clearReply(); await loadComments(activePostId);
-    const postInList=allPosts.find(p=>p.id===activePostId); if(postInList){ postInList.live_comment_count=(postInList.live_comment_count||0)+1; const badge=document.getElementById('ccount-'+activePostId); if(badge) badge.textContent='💬 '+postInList.live_comment_count; } showToast('Comment added','success');
+// ─── NOTIFICATION HELPER ──────────────────────────────────────────────────────
+async function notifyPostAuthor(postId, commentUserId, commentContent) {
+    // Get post author
+    const { data: post } = await sb.from('posts').select('user_id').eq('id', postId).single();
+    if (!post) return;
+    const authorId = post.user_id;
+    if (authorId === commentUserId) return; // don't notify yourself
+    const { data: author } = await sb.from('users').select('notify_comment_on_post').eq('id', authorId).single();
+    if (author && author.notify_comment_on_post && currentUser && currentUser.id === authorId) {
+        // Only show notification if the current user is the author and they have enabled it
+        if (Notification.permission === 'granted') {
+            const notification = new Notification('New comment on your post', {
+                body: commentContent.substring(0, 100),
+                icon: '/icons/icon-192.png',
+                tag: `post-${postId}`,
+                data: { postId }
+            });
+            notification.onclick = function() {
+                window.focus();
+                openComments(postId);
+            };
+        }
+    }
+}
+// ─── SUBMIT COMMENT (with notification) ───────────────────────────────────────
+window.submitComment = async () => {
+    const content = document.getElementById('commentInput').value.trim();
+    const imgFile = document.getElementById('commentImageInput').files[0];
+    if (!content && !imgFile) return;
+    let img = null;
+    if (imgFile) {
+        const ext = imgFile.name.split('.').pop();
+        const path = `comments/${Date.now()}.${ext}`;
+        await sb.storage.from('posts').upload(path, imgFile);
+        img = sb.storage.from('posts').getPublicUrl(path).data.publicUrl;
+    }
+    const parentId = replyToCommentId || null;
+    let attachParentId = parentId;
+    if (parentId) {
+        const findRoot = (id) => {
+            for (const root of commentRoots) {
+                if (String(root.id) === String(id)) return String(root.id);
+                for (const r of (root.replies || [])) {
+                    if (String(r.id) === String(id)) return String(root.id);
+                }
+            }
+            return id;
+        };
+        attachParentId = findRoot(parentId);
+    }
+    const { error } = await sb.from('comments').insert({
+        post_id: activePostId,
+        user_id: currentUser.id,
+        parent_id: attachParentId,
+        content: content || '',
+        image_url: img
+    });
+    if (error) { showToast('Failed to post comment', 'error'); return; }
+    document.getElementById('commentInput').value = '';
+    document.getElementById('commentImageInput').value = '';
+    if (attachParentId) replyVisibility.set(String(attachParentId), true);
+    clearReply();
+    await loadComments(activePostId);
+    const postInList = allPosts.find(p => p.id === activePostId);
+    if (postInList) {
+        postInList.live_comment_count = (postInList.live_comment_count || 0) + 1;
+        const badge = document.getElementById('ccount-' + activePostId);
+        if (badge) badge.textContent = '💬 ' + postInList.live_comment_count;
+    }
+    showToast('Comment added', 'success');
+    // Notify post author (if they have enabled notifications)
+    await notifyPostAuthor(activePostId, currentUser.id, content);
 };
 async function updateUnreadBadge(){ if(!currentUser)return; const lr=localStorage.getItem('aou_last_read')||'{}'; const lastReadAt=JSON.parse(lr); const {data:msgs}=await sb.from('messages').select('*').eq('receiver_id',currentUser.id); let total=0; (msgs||[]).forEach(m=>{if(m.created_at>(lastReadAt[m.sender_id]||'1970-01-01'))total++;}); const badge=document.getElementById('chatNavBadge'); if(total>0){badge.textContent=total>99?'99+':total; badge.style.display='flex';}else badge.style.display='none'; }
 function subscribeToUnread(){ if(unreadSubscription)sb.removeChannel(unreadSubscription); unreadSubscription=sb.channel('unread-posts').on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`receiver_id=eq.${currentUser.id}`},updateUnreadBadge).subscribe(); }
@@ -367,13 +432,12 @@ init();
 </script>
 <script src="heartbeat.js"></script>
 <script> if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').then(() => console.log('Service Worker registered')).catch((err) => console.log('SW registration failed:', err)); } </script>
-    <script>
+<script>
 document.addEventListener('backbutton', function(e) {
     if (window.location.pathname !== '/index.html' && history.length > 1) {
         e.preventDefault();
         history.back();
     } else {
-        // If available, exit the app; otherwise do nothing
         if (navigator.app && navigator.app.exitApp) navigator.app.exitApp();
     }
 }, false);
